@@ -1,0 +1,155 @@
+/* --- Import Orbitron untuk Judul dan Tombol --- */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&display=swap');
+
+
+/* --- Import Inter untuk Keterbacaan Body Text dan UI (Font Dasar) --- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+
+.stApp {
+    font-family: 'Inter', sans-serif !important;
+    color: #E8F0FF;
+    background-color: transparent; 
+}
+
+/* --- Main Container & Header --- */
+.main .block-container {
+    background: rgba(10, 12, 20, 0.88);
+    border-radius: 16px;
+}
+header[data-testid="stHeader"] {
+    font-family: 'Inter', sans-serif !important;
+    background: rgba(0, 10, 48, 0.8);
+    border-bottom: 1px solid rgba(0, 140, 255, 0.25);
+    box-shadow: 0 0 25px rgba(0, 140, 255, 0.2);
+    backdrop-filter: blur(8px);
+}
+div[data-testid="stSidebar"] *, 
+div[data-testid*="stExpander"] * {
+    font-family: 'Inter', sans-serif !important;
+}
+
+/* ------------------------------------------- */
+/* --- Titles (MENGGUNAKAN ORBITRON) --- */
+/* ------------------------------------------- */
+h1 {
+    font-family: 'Orbitron', sans-serif !important; 
+    text-align: center;
+    color: #00BFFF;
+    text-transform: uppercase;
+    font-size: 2.5em !important; /* UKURAN DIKURANGI */
+    font-weight: 600 !important; /* KETEBALAN DIKURANGI */
+    text-shadow: 0 0 20px rgba(0, 191, 255, 0.7),
+                0 0 50px rgba(0, 191, 255, 0.4);
+    margin-bottom: 0.3em;
+}
+
+h3 {
+    font-family: 'Orbitron', sans-serif !important;
+    text-align: center;
+    color: #A7C7FF;
+    font-weight: 400;
+    letter-spacing: 1px;
+    font-size: 1.4em !important; /* UKURAN DITAMBAHKAN */
+}
+
+/* --- Section Headers --- */
+h2 {
+    font-family: 'Orbitron', sans-serif !important;
+    color: #00BFFF;
+    border-left: 4px solid #00BFFF;
+    padding-left: 10px;
+    text-shadow: 0 0 10px rgba(0, 191, 255, 0.5);
+}
+
+/* ------------------------------------------- */
+/* --- Inputs (TETAP INTER) --- */
+/* ------------------------------------------- */
+input, textarea, select {
+    font-family: 'Inter', sans-serif !important; 
+    background-color: #0E101A !important;
+    color: #E8F0FF !important;
+    border: 1px solid #1A1F33 !important;
+    border-radius: 8px !important;
+}
+
+input:focus, textarea:focus, select:focus {
+    border-color: #00BFFF !important;
+    box-shadow: 0 0 8px rgba(0, 191, 255, 0.5);
+}
+
+/* ------------------------------------------- */
+/* --- Buttons (MENGGUNAKAN ORBITRON) --- */
+/* ------------------------------------------- */
+.stButton>button {
+    font-weight: 600;
+    font-family: 'Orbitron', sans-serif !important; 
+    border-radius: 10px;
+    padding: 0.6rem 1.5rem;
+    transition: all 0.25s ease;
+    box-shadow: 0 0 10px rgba(0, 191, 255, 0.3);
+    border: none;
+}
+.stButton>button[kind="primary"] {
+    background: linear-gradient(135deg, #008CFF, #00D4FF);
+    color: white;
+}
+.stButton>button[kind="primary"]:hover {
+    background: linear-gradient(135deg, #00A6FF, #33E4FF);
+    box-shadow: 0 0 20px rgba(0, 191, 255, 0.6);
+    transform: translateY(-2px);
+}
+.stButton>button[kind="secondary"] {
+    background: #1C2030;
+    color: #B0C4FF;
+}
+.stButton>button[kind="secondary"]:hover {
+    background: #252A3A;
+    transform: translateY(-2px);
+}
+
+
+/* ------------------------------------------- */
+/* --- Elemen UI Lainnya (TETAP INTER) --- */
+/* ------------------------------------------- */
+div[data-testid="stAlert"] {
+    border-radius: 10px;
+    border-left: 5px solid #00BFFF;
+    background-color: rgba(0, 191, 255, 0.1);
+    box-shadow: 0 0 15px rgba(0, 191, 255, 0.2);
+}
+
+.stContainer {
+    background: rgba(15, 18, 30, 0.9);
+    border-radius: 12px;
+    padding: 1.2rem 1.5rem;
+    border: 1px solid rgba(0, 191, 255, 0.15);
+    transition: 0.25s ease;
+}
+.stContainer:hover {
+    box-shadow: 0 0 30px rgba(0, 191, 255, 0.3);
+    transform: translateY(-3px);
+}
+
+hr, .st-emotion-cache-1pxn4x5 {
+    border: none;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(0,191,255,0.3), rgba(255,255,255,0.05));
+}
+
+footer, .stCaption, .st-emotion-cache-1wmy99l {
+    color: #8DA6D6;
+    text-align: center;
+    font-size: 0.85em;
+    font-family: 'Inter', sans-serif !important;
+}
+
+img {
+    border-radius: 10px;
+    display: block;
+    margin: auto;
+}
+
+p, .st-emotion-cache-16ids9n {
+    font-family: 'Inter', sans-serif !important;
+}
