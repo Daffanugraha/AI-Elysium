@@ -37,8 +37,9 @@ h1 {
     text-align: center;
     color: #00BFFF;
     text-transform: uppercase;
-    font-size: 2.5em !important; /* UKURAN DIKURANGI */
-    font-weight: 600 !important; /* KETEBALAN DIKURANGI */
+    /* UKURAN DIKURANGI DARI 2.5em ke 2.0em */
+    font-size: 2.0em !important; 
+    font-weight: 600 !important; 
     text-shadow: 0 0 20px rgba(0, 191, 255, 0.7),
                 0 0 50px rgba(0, 191, 255, 0.4);
     margin-bottom: 0.3em;
@@ -50,7 +51,8 @@ h3 {
     color: #A7C7FF;
     font-weight: 400;
     letter-spacing: 1px;
-    font-size: 1.4em !important; /* UKURAN DITAMBAHKAN */
+    /* UKURAN DITAMBAH DARI 1.4em ke 1.2em (Relatif lebih kecil dari sebelumnya) */
+    font-size: 1.2em !important; 
 }
 
 /* --- Section Headers --- */
@@ -60,6 +62,8 @@ h2 {
     border-left: 4px solid #00BFFF;
     padding-left: 10px;
     text-shadow: 0 0 10px rgba(0, 191, 255, 0.5);
+    /* UKURAN DITAMBAHKAN (untuk konsistensi pengurangan/relatif) */
+    font-size: 1.5em !important; 
 }
 
 /* ------------------------------------------- */
@@ -71,6 +75,8 @@ input, textarea, select {
     color: #E8F0FF !important;
     border: 1px solid #1A1F33 !important;
     border-radius: 8px !important;
+    /* Tambahkan pengurangan font untuk input */
+    font-size: 0.95em !important; 
 }
 
 input:focus, textarea:focus, select:focus {
@@ -85,10 +91,11 @@ input:focus, textarea:focus, select:focus {
     font-weight: 600;
     font-family: 'Orbitron', sans-serif !important; 
     border-radius: 10px;
-    padding: 0.6rem 1.5rem;
+    padding: 0.5rem 1.2rem; /* Padding dikurangi sedikit */
     transition: all 0.25s ease;
     box-shadow: 0 0 10px rgba(0, 191, 255, 0.3);
     border: none;
+    font-size: 0.9em !important; /* Ukuran font tombol dikurangi */
 }
 .stButton>button[kind="primary"] {
     background: linear-gradient(135deg, #008CFF, #00D4FF);
@@ -117,12 +124,14 @@ div[data-testid="stAlert"] {
     border-left: 5px solid #00BFFF;
     background-color: rgba(0, 191, 255, 0.1);
     box-shadow: 0 0 15px rgba(0, 191, 255, 0.2);
+    /* Tambahkan pengurangan font untuk Alert */
+    font-size: 0.95em !important; 
 }
 
 .stContainer {
     background: rgba(15, 18, 30, 0.9);
     border-radius: 12px;
-    padding: 1.2rem 1.5rem;
+    padding: 1.0rem 1.2rem; /* Padding dikurangi sedikit */
     border: 1px solid rgba(0, 191, 255, 0.15);
     transition: 0.25s ease;
 }
@@ -140,7 +149,8 @@ hr, .st-emotion-cache-1pxn4x5 {
 footer, .stCaption, .st-emotion-cache-1wmy99l {
     color: #8DA6D6;
     text-align: center;
-    font-size: 0.85em;
+    /* Font size dikurangi dari 0.85em */
+    font-size: 0.75em !important; 
     font-family: 'Inter', sans-serif !important;
 }
 
@@ -152,4 +162,6 @@ img {
 
 p, .st-emotion-cache-16ids9n {
     font-family: 'Inter', sans-serif !important;
+    /* Font size untuk paragraf/body text dikurangi */
+    font-size: 0.95em !important; 
 }

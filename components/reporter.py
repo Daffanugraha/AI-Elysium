@@ -1,19 +1,19 @@
-# components/reporter.py
 import os
 import streamlit as st
 import time
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+import undetected_chromedriver as uc
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
 from components.auth_manager import get_cookies_by_id, apply_cookies_to_driver, check_logged_in_via_driver
 from utils.helpers import classify_report_category
 from utils.constants import HISTORY_FILE, SUBMITTED_LOG_FILE, REPORT_CATEGORIES, REPORT_FILE
 import json
-
+from selenium.webdriver.common.action_chains import ActionChains
+import random
 
 # --- Fungsi Persistensi JSON ---
 def load_report_history():
@@ -56,7 +56,6 @@ def save_submitted_log(log):
 
 
 def auto_report_review(row, report_type=None):
-    # Ambil cookies dari user yang sedang dipilih untuk report
     user_id_to_report = st.session_state.report_user_id
     user_data = get_cookies_by_id(user_id_to_report)
     
@@ -67,21 +66,28 @@ def auto_report_review(row, report_type=None):
     cookies = user_data["cookies"]
     report_email = user_data.get("email", user_id_to_report)
 
-    options = Options()
+    # Inisialisasi Options untuk uc
+    options = uc.ChromeOptions()
     options.add_argument("--start-maximized")
-    options.add_argument("--disable-blink-features=AutomationControlled")
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
     try:
+        # Gunakan undetected-chromedriver
+        driver = uc.Chrome(options=options)
+    except Exception as e:
+        st.error(f"❌ Gagal inisialisasi Undetected-Chromedriver: {e}")
+        return
+    
+    try:
         apply_cookies_to_driver(driver, cookies)
-        time.sleep(2)
+        # Jeda acak untuk apply cookies
+        time.sleep(random.uniform(3, 5))
         driver.get("https://www.google.com/maps")
         if not check_logged_in_via_driver(driver, timeout=5):
             st.warning(f"Invalid cookies for {report_email} — login may need to be repeated")
         else:
             st.info(f"Reporting menggunakan akun: **{report_email}**")
     except Exception as e:
-        st.warning(f"Fail apply cookies for report user: {e}")
+        st.warning(f"Fail apply cookies or initial navigation for report user: {e}")
         driver.quit()
         return
 
@@ -89,7 +95,6 @@ def auto_report_review(row, report_type=None):
         if not report_type:
             category, _ = classify_report_category(row["Review Text"])
             report_type = category if category in REPORT_CATEGORIES else REPORT_CATEGORIES[-1]
-
 
         gmaps_link_for_report = st.session_state.gmaps_link_input
 
@@ -102,12 +107,12 @@ def auto_report_review(row, report_type=None):
         except Exception as e:
             st.warning(f"Gagal membuka link Google Maps: {e}")
 
-        time.sleep(3)
+        time.sleep(random.uniform(4, 7)) # Jeda acak yang lebih panjang untuk loading halaman
 
         try:
             tab = driver.find_element(By.XPATH, "//button[contains(., 'Reviews') or contains(., 'Ulasan')]")
-            driver.execute_script("arguments[0].click();", tab)
-            time.sleep(2)
+            ActionChains(driver).move_to_element(tab).click().perform() 
+            time.sleep(random.uniform(3, 5)) # Jeda yang diperpanjang
         except Exception:
             st.error("tidak bisa buka tab review")
             driver.quit()
@@ -117,7 +122,7 @@ def auto_report_review(row, report_type=None):
         try:
             sort_button = driver.find_element(By.XPATH, "//button[contains(., 'Sort') or contains(., 'Urutkan')]")
             driver.execute_script("arguments[0].click();", sort_button)
-            time.sleep(1)
+            time.sleep(random.uniform(1, 2))
             lowest = driver.find_elements(By.XPATH, "//*[contains(text(), 'Lowest rating') or contains(text(), 'Peringkat terendah')]")
             for opt in lowest:
                 try:
@@ -125,7 +130,7 @@ def auto_report_review(row, report_type=None):
                     break
                 except:
                     continue
-            time.sleep(1)
+            time.sleep(random.uniform(1, 2))
         except Exception:
             pass
 
@@ -134,34 +139,29 @@ def auto_report_review(row, report_type=None):
         
         # --- Logika Scroll dan Pencarian Dioptimalkan ---
         try:
-            # Elemen area scroll
             scroll_area = driver.find_element(By.XPATH, "//div[contains(@class,'m6QErb') and contains(@class,'DxyBCb')]")
             target = None
-            
-            # Dapatkan tinggi area scroll saat ini
             scroll_height = driver.execute_script("return arguments[0].scrollHeight", scroll_area)
             
 
-            # Loop maksimum 50 kali atau sampai target ditemukan
-            for i in range(50): 
-                # 1. Coba cari target di ulasan yang sudah termuat
+            # Loop hingga target ditemukan atau mencapai batas scroll
+            for i in range(500): # Ditingkatkan hingga 100 iterasi
                 users = driver.find_elements(By.CSS_SELECTOR, ".d4r55")
                 for u in users:
-                    # Mencocokkan nama user
                     if row["User"].lower() in u.text.lower():
                         target = u
                         break 
                 
                 if target:
-                    break # Target ditemukan, berhenti total scrolling
+                    break
 
                 current_scroll_pos = driver.execute_script("return arguments[0].scrollTop", scroll_area)
                 
-                new_scroll_pos = current_scroll_pos + 500 # Jumlah piksel per langkah scroll (bisa disesuaikan)
-                
-                for step in range(current_scroll_pos, new_scroll_pos, 100): 
+                # Scroll dalam langkah kecil (lebih manusiawi)
+                new_scroll_pos = current_scroll_pos + 400 
+                for step in range(current_scroll_pos, new_scroll_pos, 50): # 50px per langkah
                     driver.execute_script(f"arguments[0].scrollTop = {step}", scroll_area)
-                    time.sleep(0.05) # Penundaan sangat singkat (50ms) untuk efek animasi
+                    time.sleep(0.08) # Jeda per langkah scroll ditingkatkan sedikit
                 
 
                 new_scroll_height = driver.execute_script("return arguments[0].scrollHeight", scroll_area)
@@ -185,13 +185,13 @@ def auto_report_review(row, report_type=None):
             return
 
         driver.execute_script("arguments[0].scrollIntoView({behavior:'smooth',block:'center'});", target)
-        time.sleep(1)
+        time.sleep(random.uniform(1, 2))
 
         # klik titik tiga
         try:
             menu_el = target.find_element(By.XPATH, "./ancestor::div[contains(@class,'jftiEf')]//div[@class='zjA77']")
-            driver.execute_script("arguments[0].click();", menu_el)
-            time.sleep(2)
+            ActionChains(driver).move_to_element(menu_el).click().perform()
+            time.sleep(random.uniform(2, 3))
         except Exception:
             driver.quit()
             return
@@ -213,7 +213,7 @@ def auto_report_review(row, report_type=None):
             return
 
         st.toast(f"✅ click ‘report review’ to {row['User']}")
-        time.sleep(2)
+        time.sleep(random.uniform(3, 5)) # Jeda diperpanjang sebelum klik kategori
 
         tabs = driver.window_handles
         if len(tabs) > 1:
@@ -221,16 +221,7 @@ def auto_report_review(row, report_type=None):
         else:
             st.warning("⚠️ New tab not detected, popup may be in iframe")
 
-        try:
-            WebDriverWait(driver,2).until(
-                EC.presence_of_element_located(
-                    (By.XPATH, "//div[@role='dialog' or contains(@class,'popup') or contains(@class,'overlay')]")
-                )
-            )
-            st.info("✅ Popup dialog terdeteksi")
-        except:
-            time.sleep(1)
-        
+        # ... (Logika klik kategori tidak berubah, tetapi disarankan mengganti JS sleep di dalamnya) ...
         js_click_category = f"""
         const target = "{report_type}".toLowerCase().trim();
 
@@ -288,137 +279,68 @@ def auto_report_review(row, report_type=None):
 
         return await start();
         """
-
         res_cat = driver.execute_script(js_click_category)
-        if res_cat.startswith("✅"):
-            st.success(res_cat)
-        else:
-            st.warning(res_cat)
-            with open("last_report_popup_debug.html", "w", encoding="utf-8") as f:
-                f.write(driver.page_source)
-
-        # --- klik tombol submit ---
-        # --- tunggu popup muncul sebelum klik submit ---
-        try:
-            WebDriverWait(driver,2).until(
-                EC.presence_of_element_located(
-                    (By.XPATH, "//div[@role='dialog' or contains(@class,'popup') or contains(@class,'overlay')]")
-                )
-            )
-            st.info("✅ Popup dialog terdeteksi, siap klik tombol submit")
-        except:
-            time.sleep(1)
-
-        # --- klik tombol submit / laporkan ---
-        js_click_submit = """
-        async function sleep(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
-        }
-
-        function highlight(el) {
-            el.style.transition = "all 0.3s ease";
-            el.style.border = "3px solid red";
-            el.style.backgroundColor = "yellow";
-            el.scrollIntoView({behavior:'smooth', block:'center'});
-        }
-
-        function simulateClick(el) {
-            ['pointerdown','mousedown','mouseup','click'].forEach(evt => {
-                el.dispatchEvent(new MouseEvent(evt, { bubbles: true, cancelable: true, view: window }));
-            });
-        }
-
-        async function findAndClickSubmit(root) {
-            const keywords = ['submit', 'laporkan', 'send', 'report', 'kirim', 'done', 'selesai'];
-            const selectors = [
-                'button',
-                'div[role="button"]',
-                '.VfPpkd-LgbsSe',
-                '.VfPpkd-dgl2Hf-ppHlrf-sM5MNb',
-                '.VfPpkd-LgbsSe-OWXEXe',
-                '.VfPpkd-LgbsSe-OWXEXe-nzrxxc'
-            ];
-
-            for (const sel of selectors) {
-                const els = root.querySelectorAll(sel);
-                for (const el of els) {
-                    const txt = (el.innerText || el.ariaLabel || '').toLowerCase().trim();
-                    if (keywords.some(k => txt.includes(k))) {
-                        highlight(el);
-                        await sleep(1000);
-
-                        // --- klik ala user sungguhan ---
-                        el.focus();
-                        simulateClick(el);
-
-                        // --- coba panggil form handler kalau ada ---
-                        const form = el.closest('form');
-                        if (form) {
-                            try { form.requestSubmit ? form.requestSubmit() : form.submit(); } catch(e) {}
-                        }
-
-                        // --- trigger tambahan untuk Google ripple handler ---
-                        el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
-                        el.dispatchEvent(new Event('click', { bubbles: true }));
-                        
-                        await sleep(3500);
-                    }
-                }
-            }
-
-            // recursive shadowRoot
-            for (const el of root.querySelectorAll('*')) {
-                if (el.shadowRoot) {
-                    const res = await findAndClickSubmit(el.shadowRoot);
-                    if (res) return res + " (shadowRoot)";
-                }
-            }
-
-            // cek iframe
-            for (const frame of root.querySelectorAll('iframe')) {
-                try {
-                    const doc = frame.contentDocument || frame.contentWindow.document;
-                    const res = await findAndClickSubmit(doc);
-                    if (res) return res + " (iframe)";
-                } catch(e) {}
-            }
-
-            return null;
-        }
-
-        async function start() {
-            let res = await findAndClickSubmit(document);
-            if (res) return res;
-            return "⚠️ Tombol submit tidak ditemukan";
-        }
-
-        return await start();
-        """
-
-
-        res_submit = driver.execute_script(js_click_submit)
         
-        if res_submit and res_submit.startswith("✅"):
-            st.success(res_submit)
+        if not res_cat.startswith("✅"):
+            st.warning(res_cat)
+            driver.quit()
+            return
+
+        time.sleep(random.uniform(4, 7)) # Jeda panjang setelah memilih kategori
+
+        # --- KLIK FINAL MENGGUNAKAN ACTIONCHAINS ---
+        try:
+            # Tunggu tombol submit muncul (menggunakan XPath umum)
+            submit_button = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, 
+                    "//button[contains(., 'Submit') or contains(., 'Laporkan') or contains(., 'Kirim') or contains(., 'Report') or contains(., 'Done') or contains(., 'Selesai')]"))
+            )
+            st.info("✅ Siap klik tombol submit")
+        except Exception as e:
+            st.error(f"❌ Tombol Submit tidak ditemukan. Error: {e}")
+            driver.quit()
+            return
             
-            # Ensure report_email from earlier is used and session keys exist
-            reporter_email = report_email  # reuse email obtained from user cookies
+        ActionChains(driver).move_to_element(submit_button).perform() 
+        time.sleep(random.uniform(2, 4)) # Jeda manusiawi sebelum klik
+        ActionChains(driver).click().perform()
+
+        # --- TUNGGU RESPON SERVER (TITIK KRITIS: JEDA EKSTREM) ---
+        res_submit = ""
+        # Kita tunggu antara 15 hingga 25 detik untuk memberi waktu Google memproses dan merespons.
+        time.sleep(random.uniform(8, 15)) 
+        
+        # --- Cek hasil ---
+        try:
+            WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Report received') or contains(text(), 'Laporan diterima')]"))
+            )
+            st.success("✅ LAPORAN BERHASIL DITERIMA OLEH GOOGLE! (Report received)")
+            res_submit = "✅ SUCCESS"
+        except:
+            if "error=1" in driver.current_url or "Your report wasn't submitted" in driver.page_source:
+                st.error("❌ Submit berhasil diklik, TAPI SERVER GOOGLE MENOLAK (Something went wrong).")
+                res_submit = "❌ SERVER REJECTED"
+            else:
+                st.warning("⚠️ Klik Submit berhasil, TAPI status tidak diketahui.")
+                res_submit = "⚠️ UNKNOWN"
+
+
+        if res_submit.startswith("✅"):
+            reporter_email = report_email
             if "report_history" not in st.session_state:
                 st.session_state.report_history = load_report_history()
             if "reported" not in st.session_state:
                 st.session_state["reported"] = load_submitted_log()
 
-            # Build a stable review key to prevent duplicates
             review_key = f"{row.get('Place','')}|{row.get('User','')}|{row.get('Date (Parsed)','')}"
 
-            # --- LOGIKA PENYIMPANAN REPORT HISTORY PERMANEN ---
             if reporter_email not in st.session_state.report_history:
                 st.session_state.report_history[reporter_email] = {}
             
             st.session_state.report_history[reporter_email][review_key] = True 
-            save_report_history(st.session_state.report_history) # <-- SAVE HISTORY PERMANEN
+            save_report_history(st.session_state.report_history)
 
-            # --- LOG SUBMITTED DENGAN DATA LENGKAP ---
             log_entry = {
                 "Place": row["Place"],
                 "User": row["User"],
@@ -428,8 +350,7 @@ def auto_report_review(row, report_type=None):
                 "Reported By": reporter_email
             }
             st.session_state["reported"].append(log_entry)
-            save_submitted_log(st.session_state["reported"]) # <-- SAVE LOG SUBMITTED PERMANEN
-
+            save_submitted_log(st.session_state["reported"])
         else:
             st.warning(res_submit or "Submit failed.")
 

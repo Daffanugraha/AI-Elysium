@@ -346,104 +346,92 @@ with col_main:
 
         # Tombol Eksekusi / Stop / Resume
         with col_exec:
-            if st.session_state.is_reporting:
-                if st.button("🚫 Stop Report ALL", key="stop_report_all", type="secondary"): 
-                    st.session_state.is_reporting = False
-                    st.warning("Mass Report process stopped.")
-                    st.rerun() 
-            else:
-                # Menghitung reviews yang tersisa secara global
-                reviews_left = len(df) - st.session_state.report_index_start
-                if st.session_state.report_index_start == 0:
-                    report_button_label = f"🚨 Start Mass Report ({len(df_show)} Reviews)"
-                    report_button_type = "primary"
-                else:
-                    report_button_label = f"▶️ Resume Report ({reviews_left} remaining)"
-                    report_button_type = "success"
+            # Gunakan df_show, yang sudah difilter untuk halaman ini
+            df_to_report_page = df_show
 
-                if st.button(report_button_label, key="execute_report_all", type=report_button_type, disabled=st.session_state.report_user_id is None):
+            # Label sekarang mencerminkan jumlah review di halaman saat ini
+            report_button_label = f"🚨 Start Page Report ({len(df_to_report_page)} Reviews)"
+
+            if st.session_state.is_reporting:
+                if st.button("🚫 Stop Report Page", key="stop_report_all", type="secondary"):
+                    st.session_state.is_reporting = False
+                    st.warning("Page Report process stopped.")
+                    st.rerun()
+            else:
+                if st.button(report_button_label, key="execute_report_all", type="primary", disabled=st.session_state.report_user_id is None):
                     if not st.session_state.get("report_user_id"):
                         st.error("Please select a report account in the right column first.")
                         st.stop()
-                    
-                    st.session_state.is_reporting = True 
-                    
-                    # Ambil data dari titik resume global
-                    df_to_report = df.iloc[st.session_state.report_index_start:] 
 
-                    if df_to_report.empty:
-                        st.warning("All reviews have been reported or there are no reviews left.")
+                    st.session_state.is_reporting = True
+
+                    if df_to_report_page.empty:
+                        st.warning("No reviews found on this page to report.")
                         st.session_state.is_reporting = False
                         st.rerun()
-                        
+
                     else:
-                        st.info(f"Starting to report {len(df_to_report)} reviews...")
+                        st.info(f"Starting to report {len(df_to_report_page)} reviews on this page...")
                         reported_count = 0
-                        
-                        # Loop Report Massal
-                        for global_idx, row in df_to_report.iterrows(): 
-                            
+
+                        # ⚠️ PERUBAHAN PENTING: Gunakan df_to_report_page dan iterasi dengan indeks aslinya
+                        for global_idx, row in df_to_report_page.iterrows(): 
+
                             if not st.session_state.is_reporting:
                                 break
 
-                            # Gunakan pilihan dari selectbox perorangan jika ada, kalau tidak gunakan pilihan massal
                             current_report_choice = st.session_state.get(f"choice_{global_idx}", selected_report_category)
-                            
-                            # Cek Anti-Double Report (seharusnya dilakukan di logika eksekusi agar lebih efisien)
+
+                            # Cek Anti-Double Report
                             reporter_email_key = get_current_reporter_email_key()
                             review_key = generate_review_key(row)
-                            
                             already_reported = (
                                 reporter_email_key and
                                 reporter_email_key in st.session_state.report_history and
                                 review_key in st.session_state.report_history[reporter_email_key]
                             )
-                            
+
                             if already_reported:
-                                st.session_state.report_index_start = global_idx + 1 # Lompat
-                                continue
+                                # Di mode per halaman, kita hanya skip, tidak perlu update progress global
+                                continue 
 
                             try:
-                                # Panggil auto_report_review (yang akan mengurus save_report_history & save_submitted_log)
                                 auto_report_review(row, current_report_choice)
-                                
-                                # Update st.session_state["reported"] dan st.session_state.report_history
-                                # diasumsikan sudah terjadi di auto_report_review
-                                
+
                                 reported_count += 1
-                                st.session_state.report_index_start = global_idx + 1 
-                                
-                                if reported_count % 5 == 0:
-                                    st.rerun() # Refresh UI setiap 5 laporan
-                                
+
+                                # Jika berhasil, kita tidak update report_index_start (progress global) di sini, 
+                                # karena kita hanya ingin memproses halaman ini.
+                                # HAPUS: st.session_state.report_index_start = global_idx + 1 
+
+                                #if reported_count % 5 == 0:
+                                    #st.rerun() 
+
                             except Exception as e:
-                                st.warning(f"Failed to report review from {row['User']}. Stopping mass report. Error: {e}")
-                                st.session_state.report_index_start = global_idx 
-                                st.session_state.is_reporting = False 
+                                st.warning(f"Failed to report review from {row['User']}. Stopping page report. Error: {e}")
+                                st.session_state.is_reporting = False
                                 st.rerun()
-                                break 
-                        
+                                break
+
                         # Setelah loop selesai
-                        st.session_state.is_reporting = False 
+                        st.session_state.is_reporting = False
                         if reported_count > 0:
-                            st.success(f"✅ Successfully reported {reported_count} reviews!")
-                        
-                        if st.session_state.report_index_start >= len(df):
+                            st.success(f"✅ Successfully reported {reported_count} reviews on this page!")
+
+                        if reported_count > 0:
                             st.balloons()
-                            st.success("🎉 ALL reviews successfully reported!")
-                            st.session_state.report_index_start = 0 
-                        
-                        st.rerun() 
+
+                        st.rerun()
         
         # Tombol Reset Progress Global
-        if st.session_state.report_index_start > 0 and not st.session_state.is_reporting:
-            st.warning(f"Current Progress: **{st.session_state.report_index_start}** of **{len(df)}** reviews have been reported. Press Resume to continue.")
-            if st.button("↩️ Reset Report Progress (Start Over)", key="reset_report_progress", type="secondary"):
-                st.session_state.report_index_start = 0
-                st.session_state.is_reporting = False
+        #if st.session_state.report_index_start > 0 and not st.session_state.is_reporting:
+            #st.warning(f"Current Progress: **{st.session_state.report_index_start}** of **{len(df)}** reviews have been reported. Press Resume to continue.")
+            #if st.button("↩️ Reset Report Progress (Start Over)", key="reset_report_progress", type="secondary"):
+                #st.session_state.report_index_start = 0
+                #st.session_state.is_reporting = False
                 # HANYA reset log visual, history permanen tetap ada.
-                st.info("Report progress has been reset locally.")
-                st.rerun()
+                #st.info("Report progress has been reset locally.")
+                #st.rerun()
         
         st.markdown("---") 
 
