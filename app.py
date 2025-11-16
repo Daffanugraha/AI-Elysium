@@ -95,7 +95,7 @@ def inject_background_base64(img_path):
 st.set_page_config(page_title="AI Elysium Report Tool", layout="wide", initial_sidebar_state="collapsed")
 
 # ⚠️ GANTI "logo.jpg" dengan path yang benar jika file tidak di root
-inject_background_base64("static/background.png") 
+inject_background_base64("static\Background.jpg") 
 
 
 # Memuat CSS kustom untuk styling komponen (diambil dari main.css)
@@ -145,26 +145,6 @@ if "report_index_start" not in st.session_state:
 
 # --- UI: Login dan Manajemen Akun ---
 col_spacer, col_image = st.columns([5, 1]) 
-
-with col_image:
-    # Tampilkan gambar kecil, didorong ke tepi kanan kolom
-    st.markdown(
-        """
-        <div style="text-align:right; 
-                    margin-top: 5px;   
-                    padding-right: 5px; 
-                    "> 
-            <img src="data:image/png;base64,{}"
-                 style="width:300px; /* Ukuran yang diperbesar */
-                        height:auto; 
-                        object-fit:contain; 
-                        border-radius:5px;
-                        box-shadow: 0 0 5px rgba(0,0,0,0.5);">
-        </div>
-        """.format(get_img_as_base64("static\header.png")),
-        unsafe_allow_html=True
-    )
-
 # 2. Tampilkan Judul Login di Baris Baru (SECARA OTOMATIS DI BAWAH GAMBAR)
 # Kita tidak perlu menggunakan kolom untuk judul lagi, karena kita ingin dia full-width.
 
@@ -258,7 +238,7 @@ with col_main:
         st.subheader(f"📊 Reviews to Report from: {st.session_state.place_name}")
 
         # --- 2. Logika Paginasi & Display ---
-        per_page_option = st.selectbox("Show reviews per page:", [10, 25, 45, 50, 60, 70, 80, 90, 100, "All"], key="per_page_select")
+        per_page_option = st.selectbox("Show reviews per page:", [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, "All"], key="per_page_select")
 
         start_idx = 0
         end_idx = len(df)

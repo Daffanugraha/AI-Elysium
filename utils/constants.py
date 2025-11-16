@@ -22,6 +22,11 @@ REPORT_CATEGORIES = [
     "Profanity",
     "Bullying or harassment",
     "Discrimination or hate speech",
+    "Conflict of interest",
+    "Low quality information",
+    "Fake or deceptive",
+    "Personal information", 
+    "Harmful"
 ]
 
 # --- Definisi yang Diperkaya untuk Pembelajaran Model (Embedding) ---
