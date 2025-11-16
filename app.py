@@ -258,7 +258,7 @@ with col_main:
         st.subheader(f"📊 Reviews to Report from: {st.session_state.place_name}")
 
         # --- 2. Logika Paginasi & Display ---
-        per_page_option = st.selectbox("Show reviews per page:", [10, 25, 100, "All"], key="per_page_select")
+        per_page_option = st.selectbox("Show reviews per page:", [10, 25, 45, 50, 60, 70, 80, 90, 100, "All"], key="per_page_select")
 
         start_idx = 0
         end_idx = len(df)
@@ -314,14 +314,44 @@ with col_main:
         col_set, col_exec = st.columns([1, 1])
 
         def set_global_category_action():
+            """Mengubah kategori report untuk semua review di halaman saat ini."""
+            
+            df_full = st.session_state.df_reviews
+            
+            # Ambil setting dari state
+            per_page_option = st.session_state.get("per_page_select", 10) # Ambil nilai dari selectbox paginasi
+            page = st.session_state.get("current_page", 1)
             target_category = st.session_state.report_all_category_select
-            df_current = df_show
-            if not df_current.empty:
-                for idx, row in df_current.iterrows():
-                    st.session_state[f"choice_{idx}"] = target_category
-                st.session_state.set_success = True 
-            else:
+
+            if df_full.empty:
                 st.session_state.set_success = False 
+                return
+
+            # Hitung Indeks Halaman
+            if per_page_option == "All":
+                start_idx = 0
+                end_idx = len(df_full)
+            else:
+                try:
+                    per_page = int(per_page_option)
+                except ValueError:
+                    per_page = 10 # Default jika ada kesalahan
+                    
+                start_idx = (page - 1) * per_page
+                end_idx = start_idx + per_page
+            
+            # Ambil subset DataFrame untuk halaman saat ini (menggunakan index ASLI)
+            df_current_page = df_full.iloc[start_idx:min(end_idx, len(df_full))]
+            
+            if df_current_page.empty:
+                st.session_state.set_success = False 
+                return
+                
+            # Lakukan perubahan state pada INDEX ASLI (global_idx) yang digunakan oleh selectbox
+            for global_idx in df_current_page.index: 
+                st.session_state[f"choice_{global_idx}"] = target_category
+                
+            st.session_state.set_success = True
 
         # Tombol Set Kategori Default
         with col_set:
@@ -448,7 +478,7 @@ with col_main:
                 review_key in st.session_state.report_history[reporter_email_key]
             )
             
-            category_ai, score = classify_report_category(row["Review Text"])
+            category_ai, score, reason_tokens = classify_report_category(row["Review Text"])
             choice_key = f"choice_{idx}"
             
             if choice_key not in st.session_state:
@@ -461,6 +491,7 @@ with col_main:
                 st.markdown(f"💬 {row['Review Text'] or '*No text comment provided.*'}")
 
                 st.markdown(f"**🔖 AI Prediction:** `{category_ai}` ({score}% confidence)")
+                st.markdown(f"**🔍 Key Concepts:** *{reason_tokens}*") # <-- Tampilan alasan
 
                 report_choice = st.selectbox(
                     f"📑 Override Report Category for {row['User']}",

@@ -138,6 +138,7 @@ def auto_report_review(row, report_type=None):
         target = None
         
         # --- Logika Scroll dan Pencarian Dioptimalkan ---
+# --- Logika Scroll dan Pencarian Dioptimalkan ---
         try:
             scroll_area = driver.find_element(By.XPATH, "//div[contains(@class,'m6QErb') and contains(@class,'DxyBCb')]")
             target = None
@@ -145,7 +146,7 @@ def auto_report_review(row, report_type=None):
             
 
             # Loop hingga target ditemukan atau mencapai batas scroll
-            for i in range(500): # Ditingkatkan hingga 100 iterasi
+            for i in range(500):
                 users = driver.find_elements(By.CSS_SELECTOR, ".d4r55")
                 for u in users:
                     if row["User"].lower() in u.text.lower():
@@ -157,16 +158,22 @@ def auto_report_review(row, report_type=None):
 
                 current_scroll_pos = driver.execute_script("return arguments[0].scrollTop", scroll_area)
                 
+                # ✅ PERBAIKAN: Konversi ke Integer secara eksplisit
+                current_scroll_pos_int = int(current_scroll_pos) # Pastikan current_scroll_pos adalah integer
+                
                 # Scroll dalam langkah kecil (lebih manusiawi)
-                new_scroll_pos = current_scroll_pos + 400 
-                for step in range(current_scroll_pos, new_scroll_pos, 50): # 50px per langkah
+                new_scroll_pos_int = current_scroll_pos_int + 400 
+                
+                # ✅ PERBAIKAN: Gunakan nilai integer yang sudah dikonversi
+                for step in range(current_scroll_pos_int, new_scroll_pos_int, 50): # 50px per langkah
                     driver.execute_script(f"arguments[0].scrollTop = {step}", scroll_area)
                     time.sleep(0.08) # Jeda per langkah scroll ditingkatkan sedikit
                 
-
+                # ... (Logika pengecekan scroll_height dan break tetap sama)
                 new_scroll_height = driver.execute_script("return arguments[0].scrollHeight", scroll_area)
                 
-                if new_scroll_height == scroll_height and new_scroll_pos >= new_scroll_height:
+                # Perlu diingat, scroll_height juga bisa jadi float, sebaiknya konversi di sini juga
+                if int(new_scroll_height) == int(scroll_height) and new_scroll_pos_int >= int(new_scroll_height):
                     break
                 
                 scroll_height = new_scroll_height
@@ -175,8 +182,10 @@ def auto_report_review(row, report_type=None):
                 st.info(f"User {row['User']} not found.")
 
         except Exception as e:
-            st.error(f"Terjadi error saat scrolling atau pencarian: {e}")
+            # Error ini seharusnya sudah tidak muncul lagi dengan perbaikan di atas
+            st.error(f"Terjadi error saat scrolling atau pencarian: {e}") 
         # --- Akhir Logika Scroll dan Pencarian Dioptimalkan ---
+
         
         
         if not target:

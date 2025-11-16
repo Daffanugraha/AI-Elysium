@@ -271,7 +271,7 @@ def get_low_rating_reviews(gmaps_link, max_scrolls=4000) -> Tuple[pd.DataFrame, 
     options.add_argument("--log-level=3")
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option('useAutomationExtension', False)
-    options.add_argument("--start-maximized")
+    options.add_argument("--headless=new")
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
