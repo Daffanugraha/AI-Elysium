@@ -18,7 +18,6 @@ LOGIN_TIMEOUT_SECONDS = 300  # 5 menit
 # Daftar ini digunakan sebagai hasil klasifikasi akhir
 REPORT_CATEGORIES = [
     "Off topic",
-    "Spam",
     "Conflict of interest",
     "Profanity",
     "Bullying or harassment",
@@ -32,11 +31,6 @@ CATEGORY_DEFINITIONS = {
         "Content that is not relevant to the place being reviewed.",
         "A personal anecdote or political comment unrelated to the business.",
         "Random thoughts or generic statements that do not describe the location or experience."
-    ],
-    "Spam": [
-        "Unwanted commercial content, repetitive submissions, or review bombing.",
-        "Promotional material, including links, phone numbers, or advertisements.",
-        "Fake reviews not based on a real experience."
     ],
     "Conflict of interest": [
         "Reviews posted by the business owner, employee, or a direct competitor.",
