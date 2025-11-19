@@ -61,7 +61,7 @@ def get_low_rating_reviews(gmaps_link, max_scrolls=4000) -> Tuple[pd.DataFrame, 
                     break
             
             if clicked:
-                time.sleep(random.uniform(2.5, 4.0)) 
+                time.sleep(random.uniform(1.0, 2.0)) 
                 return True
             else:
                 st.warning(f"⚠️ Failed to find option '{option_text}'.")
@@ -78,13 +78,13 @@ def get_low_rating_reviews(gmaps_link, max_scrolls=4000) -> Tuple[pd.DataFrame, 
         skipped_count_critical = 0 
         
         # --- HUMAN-SMOOTH SCROLLING PARAMS ---
-        MIN_SCROLL_STEP = 300  
-        MAX_SCROLL_STEP = 550  
+        MIN_SCROLL_STEP = 700  
+        MAX_SCROLL_STEP = 1000  
         MIN_SLEEP = 0.05       
-        MAX_SLEEP = 0.15       
-        READING_INTERVAL = 150 
-        LONG_PAUSE_MIN = 0.8   
-        LONG_PAUSE_MAX = 1.5   
+        MAX_SLEEP = 0.10       
+        READING_INTERVAL = 10 
+        LONG_PAUSE_MIN = 0.3  
+        LONG_PAUSE_MAX = 0.5  
         
         # --- Find scrollable reviews element ---
         scrollable_div = None
@@ -112,7 +112,7 @@ def get_low_rating_reviews(gmaps_link, max_scrolls=4000) -> Tuple[pd.DataFrame, 
             if is_second_run or scroll_attempt_number > 1:
                 try:
                     driver.execute_script("arguments[0].scrollTop = 0", scrollable_div)
-                    time.sleep(random.uniform(1.5, 2.5))
+                    time.sleep(random.uniform(0.5, 1.0))
                 except Exception as e:
                     st.warning(f"Failed to reset scroll position: {e}")
             # --- End Logic ---
@@ -139,7 +139,7 @@ def get_low_rating_reviews(gmaps_link, max_scrolls=4000) -> Tuple[pd.DataFrame, 
                 if current_scroll_pos == last_scroll_pos and last_scroll_pos != -1:
                     same_pos_count += 1
                     
-                    if same_pos_count >= 3: 
+                    if same_pos_count >= 2: 
                         driver.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", scrollable_div)
                         time.sleep(random.uniform(0.5, 1.0)) 
 
@@ -296,20 +296,19 @@ def get_low_rating_reviews(gmaps_link, max_scrolls=4000) -> Tuple[pd.DataFrame, 
 
         # --- 3. Navigation and Place Name Retrieval ---
         driver.get(gmaps_link)
-        time.sleep(random.uniform(2.0, 3.0)) 
+        time.sleep(random.uniform(1.0, 2.0)) 
 
         try:
             place_name = driver.find_element(By.XPATH, "//h1[contains(@class, 'DUwDvf')]").text.strip()
         except Exception:
             place_name = "Unknown_Place"
-        st.info(f"Starting scraping for place: **{place_name}**")
+        st.info(f"Starting collecting data for place: **{place_name}**")
 
         # --- 4. Click Reviews tab ---
         review_tab_clicked = False
         try:
             review_tab = driver.find_element(By.XPATH, "//button[contains(., 'Reviews') or contains(., 'Ulasan')]|//a[contains(., 'Reviews') or contains(., 'Ulasan')]")
             driver.execute_script("arguments[0].click();", review_tab)
-            st.info("Clicking Reviews tab.")
             time.sleep(random.uniform(1.0, 2.0)) 
             review_tab_clicked = True
         except Exception:
@@ -326,8 +325,7 @@ def get_low_rating_reviews(gmaps_link, max_scrolls=4000) -> Tuple[pd.DataFrame, 
             
             if sorted_success:
                 low_reviews_method1 = []
-                for attempt in range(1, 3): 
-                    st.subheader(f"Method 1 - Scrolling Attempt #{attempt}")
+                for attempt in range(1, 2): 
                     reviews = _get_reviews_from_driver_and_scroll(driver, place_name, False, attempt)
                     low_reviews_method1.extend(reviews)
                     
@@ -340,8 +338,7 @@ def get_low_rating_reviews(gmaps_link, max_scrolls=4000) -> Tuple[pd.DataFrame, 
             st.header("Method 2: Default Sort (Fallback, Direct Scroll)")
             
             low_reviews_method2 = []
-            for attempt in range(1, 3): 
-                 st.subheader(f"Method 2 - Scrolling Attempt #{attempt}")
+            for attempt in range(1, 2): 
                  reviews = _get_reviews_from_driver_and_scroll(driver, place_name, True, attempt) 
                  low_reviews_method2.extend(reviews)
 

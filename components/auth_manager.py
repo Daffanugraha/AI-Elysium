@@ -12,6 +12,22 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from utils.constants import COOKIES_DIR, COOKIE_EXPIRY_MINUTES, LOGIN_TIMEOUT_SECONDS
+import hashlib
+
+
+def generate_review_key(row):
+    """Menghasilkan kunci unik SHA256 untuk Review."""
+    
+    # 🚨 Pastikan kolom 'Place' sudah ada di DataFrame!
+    place = str(row.get('Place', 'NO_PLACE')).strip().lower()
+    user = str(row.get('User', 'NOUSER')).strip().lower()
+    date_parsed = str(row.get('Date (Parsed)', 'NODATE')).split()[0]
+    text_snippet = str(row.get('Review Text', 'NOTEXT')).strip().lower()[:30]
+    
+    # Masukkan PLACE ke dalam string unik
+    unique_string = f"{place}|{user}|{date_parsed}|{text_snippet}"
+    
+    return hashlib.sha256(unique_string.encode('utf-8')).hexdigest()
 
 # --- Helper Cookies ---
 def get_cookie_file_path(user_id):

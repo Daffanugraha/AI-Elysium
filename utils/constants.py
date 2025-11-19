@@ -11,7 +11,7 @@ HISTORY_FILE = "report_history_email.json" # Kunci: Email Reporter
 SUBMITTED_LOG_FILE = "submitted_log.json" # Log untuk tampilan UI (Global)
 
 # --- Konfigurasi Timeout dan Kadaluarsa ---
-COOKIE_EXPIRY_MINUTES = 180  # 3 hours
+COOKIE_EXPIRY_MINUTES = 90  # 1 hours 30 Minutes
 LOGIN_TIMEOUT_SECONDS = 300  # 5 menit
 
 # --- Kategori Laporan Resmi ---
@@ -22,9 +22,6 @@ REPORT_CATEGORIES = [
     "Profanity",
     "Bullying or harassment",
     "Discrimination or hate speech",
-    "Conflict of interest",
-    "Low quality information",
-    "Fake or deceptive",
     "Personal information", 
     "Harmful"
 ]
@@ -57,4 +54,15 @@ CATEGORY_DEFINITIONS = {
         "Attacks against a protected group of people.",
         "Hate speech or bias against any protected characteristics."
     ],
+    # --- DUA KATEGORI TAMBAHAN ---
+    "Personal information": [
+        "Content that reveals private, non-public information about an individual (e.g., phone number, home address, medical records).",
+        "Publishing someone's name and contact details without consent.",
+        "Sharing financial or sensitive identification documents."
+    ],
+    "Harmful": [
+        "Content that promotes illegal acts, violence, self-harm, or terrorism.",
+        "Instructional content on creating weapons or dangerous substances.",
+        "Encouraging or providing methods for illegal activities."
+    ]
 }

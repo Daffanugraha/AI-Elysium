@@ -8,7 +8,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from components.auth_manager import get_cookies_by_id, apply_cookies_to_driver, check_logged_in_via_driver
+from components.auth_manager import get_cookies_by_id, apply_cookies_to_driver, check_logged_in_via_driver, generate_review_key, get_current_reporter_email_key
 from utils.helpers import classify_report_category
 from utils.constants import HISTORY_FILE, SUBMITTED_LOG_FILE, REPORT_CATEGORIES, REPORT_FILE
 import json
@@ -54,6 +54,29 @@ def save_submitted_log(log):
     except IOError as e:
         print(f"❌ Gagal menyimpan submitted log: {e}")
 
+def already_reported_by_current_user(review_data, reporter_email_key):
+    """
+    Memeriksa apakah review tertentu sudah dilaporkan oleh akun reporter aktif.
+
+    Args:
+        review_data (dict/pd.Series): Data review dari DataFrame.
+        reporter_email_key (str): Email akun reporter yang sedang aktif.
+
+    Returns:
+        bool: True jika sudah dilaporkan oleh akun ini, False jika belum.
+    """
+    if not reporter_email_key:
+        return False
+
+    review_key = generate_review_key(review_data)
+    report_history = load_report_history()
+    
+    # Cek apakah email reporter ada di history, dan apakah review_key ada di log email tersebut
+    return (
+        reporter_email_key in report_history and
+        review_key in report_history[reporter_email_key]
+    )
+
 
 def auto_report_review(row, report_type=None):
     user_id_to_report = st.session_state.report_user_id
@@ -65,10 +88,14 @@ def auto_report_review(row, report_type=None):
     
     cookies = user_data["cookies"]
     report_email = user_data.get("email", user_id_to_report)
+    reporter_email_key = get_current_reporter_email_key() # Kunci permanen untuk history
 
     # Inisialisasi Options untuk uc
     options = uc.ChromeOptions()
     options.add_argument("--start-maximized")
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
 
     try:
         # Gunakan undetected-chromedriver
@@ -80,7 +107,7 @@ def auto_report_review(row, report_type=None):
     try:
         apply_cookies_to_driver(driver, cookies)
         # Jeda acak untuk apply cookies
-        time.sleep(random.uniform(3, 5))
+        time.sleep(random.uniform(1, 2))
         driver.get("https://www.google.com/maps")
         if not check_logged_in_via_driver(driver, timeout=5):
             st.warning(f"Invalid cookies for {report_email} — login may need to be repeated")
@@ -107,12 +134,12 @@ def auto_report_review(row, report_type=None):
         except Exception as e:
             st.warning(f"Gagal membuka link Google Maps: {e}")
 
-        time.sleep(random.uniform(4, 7)) # Jeda acak yang lebih panjang untuk loading halaman
+        time.sleep(random.uniform(1, 3)) # Jeda acak yang lebih panjang untuk loading halaman
 
         try:
             tab = driver.find_element(By.XPATH, "//button[contains(., 'Reviews') or contains(., 'Ulasan')]")
             ActionChains(driver).move_to_element(tab).click().perform() 
-            time.sleep(random.uniform(3, 5)) # Jeda yang diperpanjang
+            time.sleep(random.uniform(1, 2)) # Jeda yang diperpanjang
         except Exception:
             st.error("tidak bisa buka tab review")
             driver.quit()
@@ -167,7 +194,7 @@ def auto_report_review(row, report_type=None):
                 # ✅ PERBAIKAN: Gunakan nilai integer yang sudah dikonversi
                 for step in range(current_scroll_pos_int, new_scroll_pos_int, 50): # 50px per langkah
                     driver.execute_script(f"arguments[0].scrollTop = {step}", scroll_area)
-                    time.sleep(0.08) # Jeda per langkah scroll ditingkatkan sedikit
+                    time.sleep(0.02) # Jeda per langkah scroll ditingkatkan sedikit
                 
                 # ... (Logika pengecekan scroll_height dan break tetap sama)
                 new_scroll_height = driver.execute_script("return arguments[0].scrollHeight", scroll_area)
@@ -200,7 +227,7 @@ def auto_report_review(row, report_type=None):
         try:
             menu_el = target.find_element(By.XPATH, "./ancestor::div[contains(@class,'jftiEf')]//div[@class='zjA77']")
             ActionChains(driver).move_to_element(menu_el).click().perform()
-            time.sleep(random.uniform(2, 3))
+            time.sleep(random.uniform(1, 2))
         except Exception:
             driver.quit()
             return
@@ -222,7 +249,7 @@ def auto_report_review(row, report_type=None):
             return
 
         st.toast(f"✅ click ‘report review’ to {row['User']}")
-        time.sleep(random.uniform(3, 5)) # Jeda diperpanjang sebelum klik kategori
+        time.sleep(random.uniform(1, 2)) # Jeda diperpanjang sebelum klik kategori
 
         tabs = driver.window_handles
         if len(tabs) > 1:
@@ -232,13 +259,31 @@ def auto_report_review(row, report_type=None):
 
         # ... (Logika klik kategori tidak berubah, tetapi disarankan mengganti JS sleep di dalamnya) ...
         js_click_category = f"""
-        const target = "{report_type}".toLowerCase().trim();
+        const reportType = "{report_type}".toLowerCase().trim();
+
+        let category_map = {{
+            // --- Kategori Konsisten ---
+            "profanity": ["profanity"],
+            "bullying or harassment": ["bullying or harassment"],
+            "discrimination or hate speech": ["discrimination or hate speech"],
+            
+            // --- Kategori Fleksibel ---
+            "off topic": ["off topic", "low quality information"], 
+            "conflict of interest": ["conflict of interest", "fake or deceptive"], 
+            
+            "harmful": ["harmful"], 
+            "personal information": ["personal information"],
+            "not helpful": ["not helpful"] 
+        }};
+
+        // Dapatkan semua kemungkinan target dari category_map
+        const targets = category_map[reportType] || [reportType];
 
         function sleep(ms) {{
             return new Promise(resolve => setTimeout(resolve, ms));
         }}
 
-
+        
         function highlight(el) {{
         el.style.transition = "all 0.3s ease";
         el.style.border = "3px solid red";
@@ -258,12 +303,15 @@ def auto_report_review(row, report_type=None):
         for (let el of candidates) {{
             let text = (el.innerText || "").toLowerCase().trim();
 
+            // Cek apakah teks mengandung salah satu target
+            const isMatch = targets.some(target => text.includes(target));
+
             // pastikan elemennya hanya mengandung satu kategori, bukan seluruh popup
-            if (text.includes(target) && text.length < 60) {{
-            highlight(el);
-            await sleep(3000); // delay 3 detik
-            simulateClick(el);
-            return "✅ Clicked category: " + text;
+            if (isMatch && text.length < 60) {{
+                highlight(el);
+                await sleep(3000); // delay 3 detik
+                simulateClick(el);
+                return "✅ Clicked category: " + text + " (Matched target: " + targets.find(target => text.includes(target)) + ")";
             }}
         }}
         return null;
@@ -283,11 +331,13 @@ def auto_report_review(row, report_type=None):
             continue;
             }}
         }}
-        return "⚠️ Category not found: " + target;
+        return "⚠️ Category not found. Searched targets: " + targets.join(", ");
         }}
 
         return await start();
         """
+
+
         res_cat = driver.execute_script(js_click_category)
         
         if not res_cat.startswith("✅"):
@@ -295,7 +345,7 @@ def auto_report_review(row, report_type=None):
             driver.quit()
             return
 
-        time.sleep(random.uniform(4, 7)) # Jeda panjang setelah memilih kategori
+        time.sleep(random.uniform(1, 2)) # Jeda panjang setelah memilih kategori
 
         # --- KLIK FINAL MENGGUNAKAN ACTIONCHAINS ---
         try:
@@ -311,60 +361,84 @@ def auto_report_review(row, report_type=None):
             return
             
         ActionChains(driver).move_to_element(submit_button).perform() 
-        time.sleep(random.uniform(2, 4)) # Jeda manusiawi sebelum klik
+        time.sleep(random.uniform(1, 3)) # Jeda manusiawi sebelum klik
         ActionChains(driver).click().perform()
 
         # --- TUNGGU RESPON SERVER (TITIK KRITIS: JEDA EKSTREM) ---
         res_submit = ""
         # Kita tunggu antara 15 hingga 25 detik untuk memberi waktu Google memproses dan merespons.
-        time.sleep(random.uniform(8, 15)) 
+        time.sleep(random.uniform(1, 3)) 
         
-        # --- Cek hasil ---
+ # 6. Pengecekan Status Sukses/Gagal
+        res_submit = "⚠️ UNKNOWN"
         try:
-            WebDriverWait(driver, 5).until(
+            # Pengecekan konfirmasi sukses
+            WebDriverWait(driver, 5).until( 
                 EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Report received') or contains(text(), 'Laporan diterima')]"))
             )
-            st.success("✅ LAPORAN BERHASIL DITERIMA OLEH GOOGLE! (Report received)")
-            res_submit = "✅ SUCCESS"
-        except:
+            res_submit = "✅ SUCCESS" 
+            
+        except Exception:
+            # Pengecekan kegagalan server/URL
             if "error=1" in driver.current_url or "Your report wasn't submitted" in driver.page_source:
-                st.error("❌ Submit berhasil diklik, TAPI SERVER GOOGLE MENOLAK (Something went wrong).")
                 res_submit = "❌ SERVER REJECTED"
             else:
-                st.warning("⚠️ Klik Submit berhasil, TAPI status tidak diketahui.")
                 res_submit = "⚠️ UNKNOWN"
 
-
-        if res_submit.startswith("✅"):
-            reporter_email = report_email
-            if "report_history" not in st.session_state:
-                st.session_state.report_history = load_report_history()
-            if "reported" not in st.session_state:
-                st.session_state["reported"] = load_submitted_log()
-
-            review_key = f"{row.get('Place','')}|{row.get('User','')}|{row.get('Date (Parsed)','')}"
-
-            if reporter_email not in st.session_state.report_history:
-                st.session_state.report_history[reporter_email] = {}
+        # 7. LOGGING HANYA JIKA SUKSES
+        if res_submit == "✅ SUCCESS":
             
-            st.session_state.report_history[reporter_email][review_key] = True 
-            save_report_history(st.session_state.report_history)
-
+            reporter_email = reporter_email_key
+            
+            # ⚠️ Memastikan kolom 'Place' ada, atau set dari session state
+            if 'Place' not in row or not row['Place']:
+                row['Place'] = st.session_state.get('place_name', 'Unknown Place')
+            
+            # Gunakan generate_review_key dengan format string yang Anda minta
+            review_key = generate_review_key(row) 
+            
+            # a. Update Report History (Per-Akun)
+            history = load_report_history()
+            if reporter_email not in history:
+                history[reporter_email] = {}
+                
+            history[reporter_email][review_key] = { 
+                'Reported Time': time.strftime("%Y-%m-%d %H:%M:%S"),
+                'Category': report_type
+            }
+            save_report_history(history)
+            
+            # b. Update Submitted Log (Global/Visual)
+            submitted_log = load_submitted_log()
             log_entry = {
                 "Place": row["Place"],
                 "User": row["User"],
                 "Review Text": row["Review Text"],
                 "Date": row["Date (Parsed)"],
                 "Kategori Report": report_type,
-                "Reported By": reporter_email
+                "Reported By": reporter_email,
+                'Reported Time': time.strftime("%Y-%m-%d %H:%M:%S")
             }
-            st.session_state["reported"].append(log_entry)
-            save_submitted_log(st.session_state["reported"])
-        else:
-            st.warning(res_submit or "Submit failed.")
+            submitted_log.append(log_entry)
+            save_submitted_log(submitted_log)
 
+            # Update Streamlit session state (penting agar UI di main.py terupdate)
+            st.session_state.report_history = history
+            st.session_state["reported"] = submitted_log
+
+            # Return success
+            return f"✅ Review dari {row['User']} dilaporkan oleh {reporter_email_key}."
+            
+        else:
+            # Jika gagal/UNKNOWN, raise Exception untuk ditangkap di main.py
+            raise Exception(f"Submit Failed. Status: {res_submit}")
+
+    except Exception as e:
+        # Jika ada error Selenium atau exception lain
+        raise Exception(f"Failed to submit report for {row['User']}. Error: {e}")
+        
     finally:
         try:
             driver.quit()
         except:
-            pass
+            pass # Pastikan driver ditutup

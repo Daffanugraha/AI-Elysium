@@ -14,7 +14,8 @@ import json # <-- Diperlukan jika Anda ingin menampilkan JSON mentah
 # Import modul yang telah direfaktor
 from components.auth_manager import (
     load_all_cookies, start_manual_google_login, 
-    get_active_cookies_data, get_cookies_by_id, get_current_reporter_email_key
+    get_active_cookies_data, get_cookies_by_id, get_current_reporter_email_key,
+    generate_review_key
 )
 from components.scraper import get_low_rating_reviews
 from components.reporter import (
@@ -76,7 +77,7 @@ def inject_background_base64(img_path):
         background-repeat: no-repeat;
         
         /* Opsi 1: Atur Opacity pada Pseudo-element (agar gambar transparan) */
-        opacity: 0.75; /* SEDIKIT LEBIH TERANG DARI 0.15 agar terlihat */
+        opacity: 1; /* SEDIKIT LEBIH TERANG DARI 0.15 agar terlihat */
         
         z-index: -1000; /* Jauhkan ke belakang */
     }}
@@ -215,6 +216,8 @@ with col_main:
             if not df.empty:
                 st.session_state.df_reviews = df
                 st.session_state.place_name = place_name
+
+                st.session_state.df_reviews['Place'] = place_name
                 st.success(f"✅ Collected **{len(df)}** low-rating reviews from **{place_name}**")
                 
                 # Reset state terkait report saat data baru
@@ -223,8 +226,14 @@ with col_main:
                 st.session_state.is_reporting = False 
                 st.session_state.report_index_start = 0
                 for key in list(st.session_state.keys()):
+                    # Hapus pilihan kategori lama
                     if key.startswith("choice_"):
                         del st.session_state[key]
+                    # Hapus status tombol disabled yang nyangkut
+                    if key.startswith("disabled_report_"):
+                        del st.session_state[key]
+                
+                st.rerun()
                 st.rerun()
             else:
                 st.warning("No 1★ or 2★ reviews found.")
@@ -355,6 +364,7 @@ with col_main:
                             st.info("Category change cancelled.")
 
         # Tombol Eksekusi / Stop / Resume
+# Tombol Eksekusi / Stop / Resume
         with col_exec:
             # Gunakan df_show, yang sudah difilter untuk halaman ini
             df_to_report_page = df_show
@@ -373,7 +383,7 @@ with col_main:
                         st.error("Please select a report account in the right column first.")
                         st.stop()
 
-                    st.session_state.is_reporting = True
+                    st.session_state.is_reporting = True # 🚨 Mulai set state reporting
 
                     if df_to_report_page.empty:
                         st.warning("No reviews found on this page to report.")
@@ -383,6 +393,7 @@ with col_main:
                     else:
                         st.info(f"Starting to report {len(df_to_report_page)} reviews on this page...")
                         reported_count = 0
+                        success_in_run = False # Flag untuk menandakan ada report yang berhasil
 
                         # ⚠️ PERUBAHAN PENTING: Gunakan df_to_report_page dan iterasi dengan indeks aslinya
                         for global_idx, row in df_to_report_page.iterrows(): 
@@ -402,46 +413,56 @@ with col_main:
                             )
 
                             if already_reported:
-                                # Di mode per halaman, kita hanya skip, tidak perlu update progress global
                                 continue 
 
                             try:
-                                auto_report_review(row, current_report_choice)
+                                report_result = auto_report_review(row, current_report_choice)
+                                
+                                if report_result.startswith("✅"):
+                                    reported_count += 1
+                                    success_in_run = True
 
-                                reported_count += 1
-
-                                # Jika berhasil, kita tidak update report_index_start (progress global) di sini, 
-                                # karena kita hanya ingin memproses halaman ini.
-                                # HAPUS: st.session_state.report_index_start = global_idx + 1 
-
-                                #if reported_count % 5 == 0:
-                                    #st.rerun() 
+                                    # 🟢 PERBAIKAN: Update Session State dan Log segera setelah berhasil
+                                    if reporter_email_key not in st.session_state.report_history:
+                                        st.session_state.report_history[reporter_email_key] = {}
+                                        
+                                    st.session_state.report_history[reporter_email_key][review_key] = {
+                                        "Category": current_report_choice,
+                                        "Date": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
+                                    }
+                                    st.session_state["reported"].append({
+                                        "User": row['User'],
+                                        "Place": row['Place'],
+                                        "Review Key": review_key,
+                                        "Reporter": reporter_email_key,
+                                        "Category": current_report_choice
+                                    })
+                                    
+                                time.sleep(3)
+                                # Lanjutkan Loop
+                                
 
                             except Exception as e:
                                 st.warning(f"Failed to report review from {row['User']}. Stopping page report. Error: {e}")
                                 st.session_state.is_reporting = False
+                                # Simpan apa yang sudah berhasil di-report
+                                save_report_history(st.session_state.report_history)
+                                save_submitted_log(st.session_state["reported"])
                                 st.rerun()
                                 break
 
                         # Setelah loop selesai
                         st.session_state.is_reporting = False
-                        if reported_count > 0:
+                        
+                        if success_in_run: 
+                            # 🟢 PERBAIKAN: Simpan ke Disk di akhir proses massal
+                            save_report_history(st.session_state.report_history)
+                            save_submitted_log(st.session_state["reported"])
+                            
                             st.success(f"✅ Successfully reported {reported_count} reviews on this page!")
-
-                        if reported_count > 0:
                             st.balloons()
-
+                            
                         st.rerun()
-        
-        # Tombol Reset Progress Global
-        #if st.session_state.report_index_start > 0 and not st.session_state.is_reporting:
-            #st.warning(f"Current Progress: **{st.session_state.report_index_start}** of **{len(df)}** reviews have been reported. Press Resume to continue.")
-            #if st.button("↩️ Reset Report Progress (Start Over)", key="reset_report_progress", type="secondary"):
-                #st.session_state.report_index_start = 0
-                #st.session_state.is_reporting = False
-                # HANYA reset log visual, history permanen tetap ada.
-                #st.info("Report progress has been reset locally.")
-                #st.rerun()
         
         st.markdown("---") 
 
@@ -464,7 +485,7 @@ with col_main:
             if choice_key not in st.session_state:
                 st.session_state[choice_key] = category_ai
             
-            # Tampilan Review dengan Custom Container
+            # Tampilan Review dengan Custom Container (Tidak diubah)
             with st.container(border=True):
                 st.markdown(f"**👤 {row['User']}** — ⭐ **{row['Rating']}**")
                 st.markdown(f"🕒 {row['Date (Parsed)']}  |  Reviews: {row['Total Reviews']}")
@@ -481,30 +502,69 @@ with col_main:
 
                 if already_reported:
                     # Cari info reporter dari log submitted
-                    reported_by_email = next((log.get('Reported By', 'Unknown User') for log in st.session_state['reported'] if generate_review_key(log) == review_key), 'Unknown User')
-                    
-                    st.button(f"✅ Reported by **{reported_by_email}**", key=f"reported_{idx}", disabled=True)
+                    reported_info = st.session_state.report_history[reporter_email_key][review_key]
+                    st.button(
+                        f"✅ Reported by **You** ({reporter_email_key}) as '{reported_info['Category']}'", 
+                        key=f"reported_{idx}", 
+                        disabled=True
+                    )
                 else:
-                    if st.button("🚨 Single Automatic Report", key=f"report_{idx}", disabled=st.session_state.is_reporting):
+                    # 🟢 CODE BARU (Paste ini menggantikan blok else yang lama)
+                    
+                    # Cek sederhana: Matikan tombol jika sedang ada proses reporting apapun
+                    if st.button("🚨 Single Automatic Report", 
+                                 key=f"report_{idx}", 
+                                 disabled=st.session_state.is_reporting): 
+                        
                         if st.session_state.get("report_user_id"):
                             try:
-                                # Panggil auto_report_review (yang akan mengurus JSON persistensi)
-                                auto_report_review(row, report_choice)
+                                # 1. Kunci UI agar tidak bisa klik 2x
+                                st.session_state.is_reporting = True 
                                 
-                                st.success(f"✅ Review from **{row['User']}** successfully reported!")
-                                st.rerun()
+                                # 2. Jalankan Report ke Google
+                                report_result = auto_report_review(row, report_choice)
+                                
+                                if report_result.startswith("✅"):
+                                    # 3. Update Memory Sementara (Session State)
+                                    if reporter_email_key not in st.session_state.report_history:
+                                        st.session_state.report_history[reporter_email_key] = {}
+                                        
+                                    st.session_state.report_history[reporter_email_key][review_key] = {
+                                        "Category": report_choice,
+                                        "Date": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
+                                    }
+                                
+                                    
+                                    # 4. 💾 SIMPAN KE HARDDISK (Supaya aman dari restart/logout)
+                                    save_report_history(st.session_state.report_history)
+                                    save_submitted_log(st.session_state["reported"])
+                                    
+                                    st.success(f"✅ Review from **{row['User']}** successfully reported!")
+                                    
+                                    # 5. Reset status dan Refresh halaman
+                                    st.session_state.is_reporting = False 
+                                    st.rerun()
+                                    
+                                else:
+                                    # Jika Gagal Report (Misal error selenium)
+                                    st.session_state.is_reporting = False
+                                    st.error(f"Report failed: {report_result}")
+                                
                             except Exception as e:
+                                # Jika Error Code
+                                st.session_state.is_reporting = False
                                 st.error(f"Failed Report: {e}")
                         else:
                             st.error("Please select a report account in the right column first.")
 
 
-        # Log Submitted Permanen
+        # Log Submitted Permanen (Tidak diubah)
         if "reported" in st.session_state and st.session_state["reported"]:
             st.divider()
             st.markdown("### 🧾 Successfully Reported Reviews")
             st.dataframe(pd.DataFrame(st.session_state["reported"]), use_container_width=True, hide_index=True)
 
+            
         # Download Button
         if not df.empty:
             place_filename = st.session_state.place_name.replace(" ", "_").replace("/", "_")
@@ -558,7 +618,7 @@ with col_sidebar:
         query = urllib.parse.quote_plus(place_name)
         embed_url = f"https://maps.google.com/maps?q={query}&output=embed"
         st.markdown(f"📍 **{place_name}**")
-        st.components.v1.iframe(embed_url, height=300)
+        st.components.v1.iframe(embed_url, height=400)
 
         # --- Visualisasi Rating Distribution (Menggunakan Selenium) ---
         try:
@@ -597,6 +657,9 @@ with col_sidebar:
                 warna = {5: "#4CAF50", 4: "#8BC34A", 3: "#FFC107", 2: "#FF9800", 1: "#F44336"}
                 df_dist["Warna"] = df_dist["Rating"].map(warna)
 
+# Di dalam bagian "Visualisasi Rating & Map"
+# ...
+
                 chart = (
                     alt.Chart(df_dist)
                     .mark_bar(cornerRadiusTopLeft=5, cornerRadiusTopRight=5)
@@ -606,10 +669,28 @@ with col_sidebar:
                         color=alt.Color("Warna:N", scale=None, legend=None),
                         tooltip=["Rating", "Total Reviews"]
                     )
-                    .properties(height=200)
+                    .properties(height=400)
+                    .configure_axis(
+                        grid=False, 
+                        titleColor='#E8F0FF', # Warna Judul Sumbu
+                        labelColor='#A7C7FF', # Warna Label Sumbu
+                        domainColor='#1A1F33' # Warna Garis Sumbu
+                    )
+                    .configure_view(
+                        strokeWidth=0, # Hilangkan border pada view
+                        stroke='transparent', 
+                        fill='transparent'
+                    )
+                    .configure_title(
+                        color='#00BFFF' # Warna Judul Grafik
+                    )
+                    .configure_text(
+                        fill='#E8F0FF' # Warna Teks di dalam Grafik (jika ada)
+                    )
                 )
 
-                st.altair_chart(chart, use_container_width=True)
+                st.altair_chart(chart, use_container_width=True, theme=None)
+
                 
                 total_review = df_dist["Total Reviews"].sum()
                 if total_review > 0:
@@ -634,7 +715,7 @@ with col_sidebar:
                         order=alt.Order("Total Reviews", sort="descending"),
                         tooltip=["Rating", "Total Reviews"]
                     )
-                    .properties(height=250)
+                    .properties(height=450)
                 )
                 st.altair_chart(pie_chart, use_container_width=True)
                 st.markdown(f"**Total Low-Rating Reviews: {rating_counts.sum()}**")

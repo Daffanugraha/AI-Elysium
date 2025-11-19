@@ -14,15 +14,18 @@
 
 /* --- Main Container & Header --- */
 .main .block-container {
-    background: rgba(10, 12, 20, 0.88);
+    /* Background lebih solid (0.98) */
+    background: rgba(10, 12, 20, 0.98); 
     border-radius: 16px;
+    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.5); 
 }
 header[data-testid="stHeader"] {
     font-family: 'Inter', sans-serif !important;
-    background: rgba(0, 10, 48, 0.8);
+    /* Background lebih solid (0.95) */
+    background: rgba(0, 10, 48, 0.95); 
     border-bottom: 1px solid rgba(0, 140, 255, 0.25);
     box-shadow: 0 0 25px rgba(0, 140, 255, 0.2);
-    backdrop-filter: blur(8px);
+    backdrop-filter: blur(4px);
 }
 div[data-testid="stSidebar"] *, 
 div[data-testid*="stExpander"] * {
@@ -37,11 +40,11 @@ h1 {
     text-align: center;
     color: #00BFFF;
     text-transform: uppercase;
-    /* UKURAN DIKURANGI DARI 2.5em ke 2.0em */
-    font-size: 2.0em !important; 
+    /* UKURAN DIKURANGI ke 1.9em */
+    font-size: 1.9em !important; 
     font-weight: 600 !important; 
-    text-shadow: 0 0 20px rgba(0, 191, 255, 0.7),
-                0 0 50px rgba(0, 191, 255, 0.4);
+    text-shadow: 0 0 15px rgba(0, 191, 255, 0.7),
+                 0 0 40px rgba(0, 191, 255, 0.4);
     margin-bottom: 0.3em;
 }
 
@@ -51,8 +54,8 @@ h3 {
     color: #A7C7FF;
     font-weight: 400;
     letter-spacing: 1px;
-    /* UKURAN DITAMBAH DARI 1.4em ke 1.2em (Relatif lebih kecil dari sebelumnya) */
-    font-size: 1.2em !important; 
+    /* UKURAN DIKURANGI ke 1.15em */
+    font-size: 1.15em !important; 
 }
 
 /* --- Section Headers --- */
@@ -61,27 +64,42 @@ h2 {
     color: #00BFFF;
     border-left: 4px solid #00BFFF;
     padding-left: 10px;
-    text-shadow: 0 0 10px rgba(0, 191, 255, 0.5);
-    /* UKURAN DITAMBAHKAN (untuk konsistensi pengurangan/relatif) */
-    font-size: 1.5em !important; 
+    text-shadow: 0 0 8px rgba(0, 191, 255, 0.5);
+    /* UKURAN DIKURANGI ke 1.4em */
+    font-size: 1.4em !important; 
 }
 
 /* ------------------------------------------- */
-/* --- Inputs (TETAP INTER) --- */
+/* --- Inputs & Selects (NEON TERANG) --- */
 /* ------------------------------------------- */
 input, textarea, select {
     font-family: 'Inter', sans-serif !important; 
-    background-color: #0E101A !important;
+    /* Background transparan gelap agar neon terlihat */
+    background-color: rgba(26, 31, 51, 0.7) !important; 
     color: #E8F0FF !important;
-    border: 1px solid #1A1F33 !important;
+    
+    /* Border dengan warna neon */
+    border: 1px solid #00BFFF !important; 
     border-radius: 8px !important;
-    /* Tambahkan pengurangan font untuk input */
-    font-size: 0.95em !important; 
+    
+    /* Efek Neon (Box Shadow) */
+    box-shadow: 0 0 10px rgba(0, 191, 255, 0.5), 
+                inset 0 0 10px rgba(0, 191, 255, 0.3) !important;
+    
+    /* UKURAN DIKURANGI ke 0.9em */
+    font-size: 0.9em !important; 
 }
 
+/* Efek Neon saat di-fokus (diklik/diisi) */
 input:focus, textarea:focus, select:focus {
-    border-color: #00BFFF !important;
-    box-shadow: 0 0 8px rgba(0, 191, 255, 0.5);
+    border-color: #33E4FF !important; /* Warna border lebih terang saat fokus */
+    box-shadow: 0 0 15px #33E4FF, 
+                0 0 25px rgba(51, 228, 255, 0.4) !important; /* Efek neon yang lebih kuat */
+}
+
+/* Panah dropdown selectbox */
+.st-emotion-cache-1c9fsgq svg {
+    fill: #00BFFF !important;
 }
 
 /* ------------------------------------------- */
@@ -91,11 +109,12 @@ input:focus, textarea:focus, select:focus {
     font-weight: 600;
     font-family: 'Orbitron', sans-serif !important; 
     border-radius: 10px;
-    padding: 0.5rem 1.2rem; /* Padding dikurangi sedikit */
+    padding: 0.5rem 1.0rem;
     transition: all 0.25s ease;
-    box-shadow: 0 0 10px rgba(0, 191, 255, 0.3);
+    box-shadow: 0 0 8px rgba(0, 191, 255, 0.3);
     border: none;
-    font-size: 0.9em !important; /* Ukuran font tombol dikurangi */
+    /* UKURAN DIKURANGI ke 0.85em */
+    font-size: 0.85em !important; 
 }
 .stButton>button[kind="primary"] {
     background: linear-gradient(135deg, #008CFF, #00D4FF);
@@ -103,16 +122,16 @@ input:focus, textarea:focus, select:focus {
 }
 .stButton>button[kind="primary"]:hover {
     background: linear-gradient(135deg, #00A6FF, #33E4FF);
-    box-shadow: 0 0 20px rgba(0, 191, 255, 0.6);
-    transform: translateY(-2px);
+    box-shadow: 0 0 15px rgba(0, 191, 255, 0.6);
+    transform: translateY(-1px);
 }
 .stButton>button[kind="secondary"] {
-    background: #1C2030;
+    background: #151825; 
     color: #B0C4FF;
 }
 .stButton>button[kind="secondary"]:hover {
-    background: #252A3A;
-    transform: translateY(-2px);
+    background: #1C2030; 
+    transform: translateY(-1px);
 }
 
 
@@ -123,34 +142,35 @@ div[data-testid="stAlert"] {
     border-radius: 10px;
     border-left: 5px solid #00BFFF;
     background-color: rgba(0, 191, 255, 0.1);
-    box-shadow: 0 0 15px rgba(0, 191, 255, 0.2);
-    /* Tambahkan pengurangan font untuk Alert */
-    font-size: 0.95em !important; 
+    box-shadow: 0 0 10px rgba(0, 191, 255, 0.2);
+    /* UKURAN DIKURANGI ke 0.9em */
+    font-size: 0.9em !important; 
 }
 
 .stContainer {
-    background: rgba(15, 18, 30, 0.9);
+    /* Background lebih solid (0.98) */
+    background: rgba(15, 18, 30, 0.98); 
     border-radius: 12px;
-    padding: 1.0rem 1.2rem; /* Padding dikurangi sedikit */
-    border: 1px solid rgba(0, 191, 255, 0.15);
+    padding: 1.0rem 1.0rem; 
+    border: 1px solid rgba(0, 191, 255, 0.1); 
     transition: 0.25s ease;
 }
 .stContainer:hover {
-    box-shadow: 0 0 30px rgba(0, 191, 255, 0.3);
-    transform: translateY(-3px);
+    box-shadow: 0 0 20px rgba(0, 191, 255, 0.2); 
+    transform: translateY(-2px); 
 }
 
 hr, .st-emotion-cache-1pxn4x5 {
     border: none;
     height: 1px;
-    background: linear-gradient(90deg, rgba(0,191,255,0.3), rgba(255,255,255,0.05));
+    background: linear-gradient(90deg, rgba(0,191,255,0.4), rgba(255,255,255,0.1));
 }
 
 footer, .stCaption, .st-emotion-cache-1wmy99l {
     color: #8DA6D6;
     text-align: center;
-    /* Font size dikurangi dari 0.85em */
-    font-size: 0.75em !important; 
+    /* UKURAN DIKURANGI ke 0.7em */
+    font-size: 0.7em !important; 
     font-family: 'Inter', sans-serif !important;
 }
 
@@ -162,6 +182,60 @@ img {
 
 p, .st-emotion-cache-16ids9n {
     font-family: 'Inter', sans-serif !important;
-    /* Font size untuk paragraf/body text dikurangi */
-    font-size: 0.95em !important; 
+    /* UKURAN DIKURANGI ke 0.9em */
+    font-size: 0.9em !important; 
+}
+
+
+/* ------------------------------------------- */
+/* --- DROPDOWN POPUP (GELAP PERMANEN) --- */
+/* ------------------------------------------- */
+
+/* Menargetkan kontainer popup yang muncul saat selectbox diklik */
+div.st-bd.st-bu {
+    /* Background kontainer popup dibuat sangat gelap */
+    background-color: #0E101A !important; 
+    border: 1px solid #00BFFF !important; 
+    border-radius: 8px !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7) !important;
+}
+
+/* Menargetkan setiap opsi (list item) di dalam dropdown */
+div[data-testid="stVirtualList"] div {
+    /* Warna teks opsi tetap terang */
+    color: #E8F0FF !important; 
+    background-color: transparent !important;
+    font-size: 0.9em !important;
+}
+
+/* Menargetkan opsi saat di-hover/dipilih */
+div.st-b4:hover, 
+div.st-b5 {
+    /* Background saat di-hover/dipilih dibuat biru muda gelap */
+    background-color: rgba(0, 191, 255, 0.2) !important;
+    color: #00BFFF !important; 
+}
+
+
+/* ------------------------------------------- */
+/* --- PERBAIKAN GRAFIK ALTAIR (TRANSPARAN) --- */
+/* ------------------------------------------- */
+
+/* Menargetkan kontainer Streamlit untuk grafik (SVG yang dihasilkan Altair) */
+[data-testid="stVegaLiteChart"] svg, 
+[data-testid="stVegaLiteChart"] {
+    /* Paksa background menjadi transparan untuk menghilangkan sisa putih */
+    background: transparent !important; 
+}
+
+/* Menargetkan elemen Canvas (jika rendering menggunakan canvas) */
+[data-testid="stVegaLiteChart"] canvas {
+    background: transparent !important;
+}
+
+/* Menargetkan elemen div yang membungkus grafik jika masih ada sisa putih */
+.st-emotion-cache-1wmy99l div, 
+.st-emotion-cache-1pxn4x5 div,
+.st-emotion-cache-1j71wlp div {
+    background: transparent !important;
 }
