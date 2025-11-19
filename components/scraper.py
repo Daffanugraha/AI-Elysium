@@ -320,7 +320,6 @@ def get_low_rating_reviews(gmaps_link, max_scrolls=4000) -> Tuple[pd.DataFrame, 
 
         if review_tab_clicked:
             # --- METHOD 1: SORT BY LOWEST RATING (Priority) ---
-            st.header("Method 1: Lowest Rating (Priority, UI Sort Active)")
             sorted_success = _attempt_sort(driver, "lowest")
             
             if sorted_success:
@@ -335,7 +334,6 @@ def get_low_rating_reviews(gmaps_link, max_scrolls=4000) -> Tuple[pd.DataFrame, 
                 st.warning("Sorting by Lowest Rating failed. Proceeding to Method 2.")
 
             # --- METHOD 2: FALLBACK TO DEFAULT RATING (Always Executed, NO UI SORT) ---
-            st.header("Method 2: Default Sort (Fallback, Direct Scroll)")
             
             low_reviews_method2 = []
             for attempt in range(1, 2): 
