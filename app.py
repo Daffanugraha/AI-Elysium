@@ -141,6 +141,8 @@ if "is_reporting" not in st.session_state:
     st.session_state.is_reporting = False 
 if "report_index_start" not in st.session_state:
     st.session_state.report_index_start = 0 
+if "report_start_idx" not in st.session_state:
+    st.session_state.report_start_idx = 0
 
 
 
@@ -365,6 +367,10 @@ with col_main:
 
         # Tombol Eksekusi / Stop / Resume
 # Tombol Eksekusi / Stop / Resume
+# Pastikan semua fungsi pembantu diimport (time, pd, st, dll.)
+
+# ... (Kode di atas col_exec tidak berubah)
+
         with col_exec:
             # Gunakan df_show, yang sudah difilter untuk halaman ini
             df_to_report_page = df_show
@@ -373,99 +379,151 @@ with col_main:
             report_button_label = f"🚨 Start Page Report ({len(df_to_report_page)} Reviews)"
 
             if st.session_state.is_reporting:
+                # --- BLOK A: SEDANG MELAPOR (Loop Biasa) ---
+                
+                # 1. Tombol Stop
                 if st.button("🚫 Stop Report Page", key="stop_report_all", type="secondary"):
-                    st.session_state.is_reporting = False
-                    st.warning("Page Report process stopped.")
-                    st.rerun()
+                    st.session_state.is_reporting = False # 🛑 Set flag stop
+                    st.warning("Page Report process stopping...")
+                    
+                    # 🔑 LOGIKA DRIVER QUIT SAAT KLIK STOP
+                    if 'driver' in st.session_state and st.session_state.driver is not None:
+                        try:
+                            st.session_state.driver.quit()
+                            del st.session_state.driver
+                            st.success("✅ WebDriver (Chrome) successfully closed.")
+                        except:
+                            pass
+                    
+                    st.rerun() # RERUN untuk refresh UI
+
+                st.info(f"Reporting in progress... ({len(df_to_report_page)} reviews)")
+                
+                reported_count = 0
+                success_in_run = False
+                status_container = st.empty()
+
+                for global_idx, row in df_to_report_page.iterrows(): 
+                    
+                    # --- Perbaikan 2: Cek Stop di setiap iterasi ---
+                    if not st.session_state.is_reporting:
+                        st.warning(f"Process manually stopped after {reported_count} reports.")
+                        break # Keluar dari loop
+
+                    # --- Perbaikan 3: Mengambil Kategori yang Benar (Menggunakan Prediksi AI sebagai Default) ---
+                    current_report_choice = st.session_state.get(f"choice_{global_idx}") 
+                    
+                    if current_report_choice is None:
+                        # Jika Selectbox belum pernah disentuh/diinisialisasi, ambil prediksi AI
+                        category_ai, _, _ = classify_report_category(row["Review Text"])
+                        current_report_choice = category_ai 
+                    
+                    # Cek Anti-Double Report
+                    reporter_email_key = get_current_reporter_email_key() 
+                    review_key = generate_review_key(row)
+                    already_reported = (
+                        reporter_email_key and
+                        reporter_email_key in st.session_state.report_history and
+                        review_key in st.session_state.report_history[reporter_email_key]
+                    )
+
+                    if already_reported:
+                        status_container.info(f"Skipping review from {row['User']}: Already reported.")
+                        continue 
+
+                    try:
+                        status_container.text(f"Reporting {reported_count + 1}/{len(df_to_report_page)}: {row['User']} as '{current_report_choice}'...")
+                        report_result = auto_report_review(row, current_report_choice)
+                        
+                        if report_result.startswith("✅"):
+                            reported_count += 1
+                            success_in_run = True
+                            
+                            # --- Perbaikan 1: LOGGING EKSPLISIT untuk sinkronisasi disable ---
+                            if reporter_email_key not in st.session_state.report_history:
+                                st.session_state.report_history[reporter_email_key] = {}
+                                
+                            st.session_state.report_history[reporter_email_key][review_key] = {
+                                "Category": current_report_choice,
+                                "Date": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
+                            }
+                            save_report_history(st.session_state.report_history) # Simpan ke disk
+                            
+                            status_container.success(f"✅ Success reporting {row['User']}. Waiting 3s...")
+                            time.sleep(3) # Jeda antar report
+                        else:
+                            status_container.warning(f"Failed to report review from {row['User']}. Stopping page report. Details: {report_result}")
+                            #st.session_state.is_reporting = False
+                            continue
+                            
+                            # 🔑 LOGIKA DRIVER QUIT SAAT GAGAL REPORT
+                            #if 'driver' in st.session_state and st.session_state.driver is not None:
+                                #try:
+                                    #st.session_state.driver.quit()
+                                    #del st.session_state.driver
+                                #except:
+                                    #pass
+                                    
+                            break 
+                    
+                    except Exception as e:
+                        st.error(f"❌ Error reporting review from {row['User']}. Skipping. Error: {e}")
+                        #st.session_state.is_reporting = False
+                        continue
+                        
+                        # 🔑 LOGIKA DRIVER QUIT SAAT EXCEPTION
+                        #if 'driver' in st.session_state and st.session_state.driver is not None:
+                            #try:
+                                #st.session_state.driver.quit()
+                                #del st.session_state.driver
+                            #except:
+                                #pass
+
+                        break
+                
+                # --- Setelah loop selesai (Baik karena break, stop, atau selesai normal) ---
+                status_container.empty()
+
+                st.session_state.is_reporting = False # Reset state reporting
+                
+                # 🔑 LOGIKA DRIVER QUIT SAAT SELESAI NORMAL
+                if 'driver' in st.session_state and st.session_state.driver is not None:
+                    try:
+                        st.session_state.driver.quit()
+                        del st.session_state.driver
+                        st.success("✅ Report Finished. WebDriver closed.")
+                    except:
+                        pass
+
+                if success_in_run: 
+                    # Tombol disable terjadi di sini setelah log di atas sukses
+                    st.success(f"✅ Successfully reported {reported_count} reviews on this page!")
+                    st.balloons()
+                    
+                st.rerun() # RERUN wajib untuk memuat ulang UI dengan log baru (tombol disable)
+                    
             else:
+                # --- BLOK B: TIDAK MELAPOR (TOMBOL START) ---
+                
                 if st.button(report_button_label, key="execute_report_all", type="primary", disabled=st.session_state.report_user_id is None):
                     if not st.session_state.get("report_user_id"):
                         st.error("Please select a report account in the right column first.")
                         st.stop()
-
-                    st.session_state.is_reporting = True # 🚨 Mulai set state reporting
-
+                    
+                    st.session_state.is_reporting = True 
+                    
                     if df_to_report_page.empty:
                         st.warning("No reviews found on this page to report.")
                         st.session_state.is_reporting = False
                         st.rerun()
-
                     else:
-                        st.info(f"Starting to report {len(df_to_report_page)} reviews on this page...")
-                        reported_count = 0
-                        success_in_run = False # Flag untuk menandakan ada report yang berhasil
+                        # 🔑 CATATAN: Sebelum RERUN, pastikan driver sudah dibuat dan disimpan 
+                        # di st.session_state.driver (Logika ini harus ada di tempat lain)
+                        st.rerun() 
 
-                        # ⚠️ PERUBAHAN PENTING: Gunakan df_to_report_page dan iterasi dengan indeks aslinya
-                        for global_idx, row in df_to_report_page.iterrows(): 
+        st.markdown("---")
 
-                            if not st.session_state.is_reporting:
-                                break
-
-                            current_report_choice = st.session_state.get(f"choice_{global_idx}", selected_report_category)
-
-                            # Cek Anti-Double Report
-                            reporter_email_key = get_current_reporter_email_key()
-                            review_key = generate_review_key(row)
-                            already_reported = (
-                                reporter_email_key and
-                                reporter_email_key in st.session_state.report_history and
-                                review_key in st.session_state.report_history[reporter_email_key]
-                            )
-
-                            if already_reported:
-                                continue 
-
-                            try:
-                                report_result = auto_report_review(row, current_report_choice)
-                                
-                                if report_result.startswith("✅"):
-                                    reported_count += 1
-                                    success_in_run = True
-
-                                    # 🟢 PERBAIKAN: Update Session State dan Log segera setelah berhasil
-                                    if reporter_email_key not in st.session_state.report_history:
-                                        st.session_state.report_history[reporter_email_key] = {}
-                                        
-                                    st.session_state.report_history[reporter_email_key][review_key] = {
-                                        "Category": current_report_choice,
-                                        "Date": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
-                                    }
-                                    st.session_state["reported"].append({
-                                        "User": row['User'],
-                                        "Place": row['Place'],
-                                        "Review Key": review_key,
-                                        "Reporter": reporter_email_key,
-                                        "Category": current_report_choice
-                                    })
-                                    
-                                time.sleep(3)
-                                # Lanjutkan Loop
-                                
-
-                            except Exception as e:
-                                st.warning(f"Failed to report review from {row['User']}. Stopping page report. Error: {e}")
-                                st.session_state.is_reporting = False
-                                # Simpan apa yang sudah berhasil di-report
-                                save_report_history(st.session_state.report_history)
-                                save_submitted_log(st.session_state["reported"])
-                                st.rerun()
-                                break
-
-                        # Setelah loop selesai
-                        st.session_state.is_reporting = False
-                        
-                        if success_in_run: 
-                            # 🟢 PERBAIKAN: Simpan ke Disk di akhir proses massal
-                            save_report_history(st.session_state.report_history)
-                            save_submitted_log(st.session_state["reported"])
-                            
-                            st.success(f"✅ Successfully reported {reported_count} reviews on this page!")
-                            st.balloons()
-                            
-                        st.rerun()
-        
-        st.markdown("---") 
-
+# ... (Sisa kode Report Tunggal dan Tampilan Log tidak berubah)
         # --- 4. Tampilan Review Perorangan (dengan SelectBox & Button) ---
         reporter_email_key = get_current_reporter_email_key()
 
@@ -473,6 +531,7 @@ with col_main:
             review_key = generate_review_key(row)
 
             # Cek Anti-Double Report berdasarkan Kunci Permanen
+            reporter_email_key = get_current_reporter_email_key()
             already_reported = (
                 reporter_email_key and
                 reporter_email_key in st.session_state.report_history and
@@ -533,11 +592,10 @@ with col_main:
                                         "Category": report_choice,
                                         "Date": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
                                     }
-                                
                                     
                                     # 4. 💾 SIMPAN KE HARDDISK (Supaya aman dari restart/logout)
                                     save_report_history(st.session_state.report_history)
-                                    save_submitted_log(st.session_state["reported"])
+                                    # save_submitted_log(st.session_state["reported"])
                                     
                                     st.success(f"✅ Review from **{row['User']}** successfully reported!")
                                     

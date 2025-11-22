@@ -107,7 +107,7 @@ def auto_report_review(row, report_type=None):
     try:
         apply_cookies_to_driver(driver, cookies)
         # Jeda acak untuk apply cookies
-        time.sleep(random.uniform(1, 2))
+        time.sleep(random.uniform(2, 4))
         driver.get("https://www.google.com/maps")
         if not check_logged_in_via_driver(driver, timeout=5):
             st.warning(f"Invalid cookies for {report_email} — login may need to be repeated")
@@ -134,12 +134,12 @@ def auto_report_review(row, report_type=None):
         except Exception as e:
             st.warning(f"Gagal membuka link Google Maps: {e}")
 
-        time.sleep(random.uniform(1, 3)) # Jeda acak yang lebih panjang untuk loading halaman
+        time.sleep(random.uniform(2, 4)) # Jeda acak yang lebih panjang untuk loading halaman
 
         try:
             tab = driver.find_element(By.XPATH, "//button[contains(., 'Reviews') or contains(., 'Ulasan')]")
             ActionChains(driver).move_to_element(tab).click().perform() 
-            time.sleep(random.uniform(1, 2)) # Jeda yang diperpanjang
+            time.sleep(random.uniform(2, 4)) # Jeda yang diperpanjang
         except Exception:
             st.error("tidak bisa buka tab review")
             driver.quit()
@@ -149,7 +149,7 @@ def auto_report_review(row, report_type=None):
         try:
             sort_button = driver.find_element(By.XPATH, "//button[contains(., 'Sort') or contains(., 'Urutkan')]")
             driver.execute_script("arguments[0].click();", sort_button)
-            time.sleep(random.uniform(1, 2))
+            time.sleep(random.uniform(2, 4))
             lowest = driver.find_elements(By.XPATH, "//*[contains(text(), 'Lowest rating') or contains(text(), 'Peringkat terendah')]")
             for opt in lowest:
                 try:
@@ -157,7 +157,7 @@ def auto_report_review(row, report_type=None):
                     break
                 except:
                     continue
-            time.sleep(random.uniform(1, 2))
+            time.sleep(random.uniform(2, 4))
         except Exception:
             pass
 
@@ -167,7 +167,9 @@ def auto_report_review(row, report_type=None):
         # --- Logika Scroll dan Pencarian Dioptimalkan ---
 # --- Logika Scroll dan Pencarian Dioptimalkan ---
         try:
-            scroll_area = driver.find_element(By.XPATH, "//div[contains(@class,'m6QErb') and contains(@class,'DxyBCb')]")
+            scroll_area = WebDriverWait(driver, 2).until(
+                EC.presence_of_element_located((By.XPATH, "//div[contains(@class,'m6QErb') and contains(@class,'DxyBCb')]"))
+            )
             target = None
             scroll_height = driver.execute_script("return arguments[0].scrollHeight", scroll_area)
             
@@ -192,9 +194,9 @@ def auto_report_review(row, report_type=None):
                 new_scroll_pos_int = current_scroll_pos_int + 400 
                 
                 # ✅ PERBAIKAN: Gunakan nilai integer yang sudah dikonversi
-                for step in range(current_scroll_pos_int, new_scroll_pos_int, 50): # 50px per langkah
+                for step in range(current_scroll_pos_int, new_scroll_pos_int, 100): # 50px per langkah
                     driver.execute_script(f"arguments[0].scrollTop = {step}", scroll_area)
-                    time.sleep(0.02) # Jeda per langkah scroll ditingkatkan sedikit
+                    time.sleep(0.003) # Jeda per langkah scroll ditingkatkan sedikit
                 
                 # ... (Logika pengecekan scroll_height dan break tetap sama)
                 new_scroll_height = driver.execute_script("return arguments[0].scrollHeight", scroll_area)
@@ -221,13 +223,13 @@ def auto_report_review(row, report_type=None):
             return
 
         driver.execute_script("arguments[0].scrollIntoView({behavior:'smooth',block:'center'});", target)
-        time.sleep(random.uniform(1, 2))
+        time.sleep(random.uniform(2, 3))
 
         # klik titik tiga
         try:
             menu_el = target.find_element(By.XPATH, "./ancestor::div[contains(@class,'jftiEf')]//div[@class='zjA77']")
             ActionChains(driver).move_to_element(menu_el).click().perform()
-            time.sleep(random.uniform(1, 2))
+            time.sleep(random.uniform(2, 3))
         except Exception:
             driver.quit()
             return
@@ -249,7 +251,7 @@ def auto_report_review(row, report_type=None):
             return
 
         st.toast(f"✅ click ‘report review’ to {row['User']}")
-        time.sleep(random.uniform(1, 2)) # Jeda diperpanjang sebelum klik kategori
+        time.sleep(random.uniform(2, 3)) # Jeda diperpanjang sebelum klik kategori
 
         tabs = driver.window_handles
         if len(tabs) > 1:
@@ -345,12 +347,12 @@ def auto_report_review(row, report_type=None):
             driver.quit()
             return
 
-        time.sleep(random.uniform(1, 2)) # Jeda panjang setelah memilih kategori
+        time.sleep(random.uniform(2, 4)) # Jeda panjang setelah memilih kategori
 
         # --- KLIK FINAL MENGGUNAKAN ACTIONCHAINS ---
         try:
             # Tunggu tombol submit muncul (menggunakan XPath umum)
-            submit_button = WebDriverWait(driver, 10).until(
+            submit_button = WebDriverWait(driver, 7).until(
                 EC.element_to_be_clickable((By.XPATH, 
                     "//button[contains(., 'Submit') or contains(., 'Laporkan') or contains(., 'Kirim') or contains(., 'Report') or contains(., 'Done') or contains(., 'Selesai')]"))
             )
@@ -373,7 +375,7 @@ def auto_report_review(row, report_type=None):
         res_submit = "⚠️ UNKNOWN"
         try:
             # Pengecekan konfirmasi sukses
-            WebDriverWait(driver, 5).until( 
+            WebDriverWait(driver, 7).until( 
                 EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Report received') or contains(text(), 'Laporan diterima')]"))
             )
             res_submit = "✅ SUCCESS" 
@@ -395,7 +397,8 @@ def auto_report_review(row, report_type=None):
                 row['Place'] = st.session_state.get('place_name', 'Unknown Place')
             
             # Gunakan generate_review_key dengan format string yang Anda minta
-            review_key = generate_review_key(row) 
+            review_key = generate_review_key(row)
+
             
             # a. Update Report History (Per-Akun)
             history = load_report_history()
@@ -417,6 +420,7 @@ def auto_report_review(row, report_type=None):
                 "Date": row["Date (Parsed)"],
                 "Kategori Report": report_type,
                 "Reported By": reporter_email,
+                "Review Key": review_key,
                 'Reported Time': time.strftime("%Y-%m-%d %H:%M:%S")
             }
             submitted_log.append(log_entry)

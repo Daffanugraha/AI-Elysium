@@ -324,7 +324,7 @@ def get_low_rating_reviews(gmaps_link, max_scrolls=4000) -> Tuple[pd.DataFrame, 
             
             if sorted_success:
                 low_reviews_method1 = []
-                for attempt in range(1, 2): 
+                for attempt in range(1, 3): 
                     reviews = _get_reviews_from_driver_and_scroll(driver, place_name, False, attempt)
                     low_reviews_method1.extend(reviews)
                     
