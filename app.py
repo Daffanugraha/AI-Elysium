@@ -25,8 +25,8 @@ from components.reporter import (
     load_submitted_log, # <-- Import untuk persistensi
     save_submitted_log  # <-- Import untuk persistensi
 )
-from utils.helpers import classify_report_category, generate_review_key # <-- Import kunci dinamis
-from utils.constants import REPORT_CATEGORIES
+from utils.helpers import classify_report_category, generate_review_key, get_validation_details # <-- Import kunci dinamis
+from utils.constants import REPORT_CATEGORIES, CATEGORY_DEFINITIONS
 
 
 # 1. Base64 Getter Function
@@ -539,6 +539,17 @@ with col_main:
             )
             
             category_ai, score, reason_tokens = classify_report_category(row["Review Text"])
+
+            validation_details = get_validation_details(
+                    review_text=row['Review Text'] or "", 
+                    category_ai=category_ai, 
+                    score=score, 
+                    key_tokens_str=reason_tokens
+                )
+    
+            policy_reason = validation_details['PolicyReason']
+            context_sentence = validation_details['ContextSentence']
+            key_concepts_str = validation_details['KeyConcepts']
             choice_key = f"choice_{idx}"
             
             if choice_key not in st.session_state:
@@ -549,9 +560,11 @@ with col_main:
                 st.markdown(f"**👤 {row['User']}** — ⭐ **{row['Rating']}**")
                 st.markdown(f"🕒 {row['Date (Parsed)']}  |  Reviews: {row['Total Reviews']}")
                 st.markdown(f"💬 {row['Review Text'] or '*No text comment provided.*'}")
-
                 st.markdown(f"**🔖 AI Prediction:** `{category_ai}` ({score}% confidence)")
+                st.markdown(f"**📜 Policy Violation Reason:** {policy_reason}")
                 st.markdown(f"**🔍 Key Concepts:** *{reason_tokens}*") # <-- Tampilan alasan
+                st.markdown(f"**📝 Contextual Sentence:** *{context_sentence}*")
+
 
                 report_choice = st.selectbox(
                     f"📑 Override Report Category for {row['User']}",

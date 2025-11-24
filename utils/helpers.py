@@ -9,7 +9,7 @@ import torch # Diperlukan untuk manipulasi tensor (word embeddings)
 from nltk.corpus import stopwords
 from datetime import datetime, timedelta
 from sentence_transformers import SentenceTransformer, util
-from .constants import REPORT_CATEGORIES
+from .constants import REPORT_CATEGORIES, CATEGORY_DEFINITIONS
 
 # Inisialisasi NLTK (hanya sekali)
 try:
@@ -78,6 +78,89 @@ def extract_key_tokens(text, target_category, n_tokens=4):
     
     return ", ".join(key_tokens)
 # --------------------------------------------------------
+
+@st.cache_data
+def get_validation_details(review_text: str, category_ai: str, score: float, key_tokens_str: str) -> dict:
+    """
+    Finds the specific policy reason from CATEGORY_DEFINITIONS and extracts the contextual sentence.
+    
+    Args:
+        review_text: The complete review text.
+        category_ai: The category predicted by the AI (e.g., "Profanity").
+        score: The confidence score (0-100).
+        key_tokens_str: The comma-separated string of trigger keywords (from extract_key_tokens).
+
+    Returns:
+        Dict with 'PolicyReason', 'ContextSentence', and 'KeyConcepts' (str).
+    """
+    # Convert token string to list
+    key_tokens = [token.strip() for token in key_tokens_str.split(',') if token.strip()]
+
+    result = {
+        "PolicyReason": f"AI Classification: {category_ai}. No specific policy definition matched.",
+        "ContextSentence": review_text if review_text else "*Empty Review*",
+        "KeyConcepts": key_tokens_str
+    }
+
+    # 1. HANDLE 100% OFF TOPIC (No Text/Short Review)
+    if category_ai == "Off topic" and score == 100.0:
+        result['PolicyReason'] = "**Input text is missing or too short (No Text/Short Review).**"
+        result['ContextSentence'] = "*The classification is based on the absence of substantive content.*"
+        result['KeyConcepts'] = "N/A"
+        return result
+    
+    # Check for general errors/empty inputs
+    if not review_text or not key_tokens or category_ai not in CATEGORY_DEFINITIONS:
+        return result
+
+    # 2. Find the Most Relevant Contextual Sentence
+    # Combine all trigger tokens into a regex pattern (case-insensitive, bounded)
+    token_pattern = "|".join(r"\b" + re.escape(token) + r"\b" for token in key_tokens)
+    
+    # Split the review into sentences
+    sentences = re.split(r'(?<=[.!?])\s+', review_text) 
+    
+    context_sentence = ""
+    for sentence in sentences:
+        if re.search(token_pattern, sentence, re.IGNORECASE):
+            # Highlight the keywords in the contextual sentence
+            context_sentence = re.sub(
+                r'(' + token_pattern + r')', 
+                r'**\1**', 
+                sentence, 
+                flags=re.IGNORECASE
+            )
+            break
+            
+    if context_sentence:
+        result['ContextSentence'] = context_sentence
+    else:
+        # If no sentence is found, use the full text and highlight tokens
+        result['ContextSentence'] = re.sub(
+            r'(' + token_pattern + r')', 
+            r'**\1**', 
+            review_text, 
+            flags=re.IGNORECASE
+        )
+        
+    # 3. Find the Most Relevant Policy Definition using Semantic Similarity
+    
+    definitions = CATEGORY_DEFINITIONS[category_ai]
+    definition_embeddings = MODEL.encode(definitions, convert_to_tensor=True)
+    query_embedding = MODEL.encode(review_text, convert_to_tensor=True)
+
+    # Calculate cosine similarity
+    sim_scores = util.cos_sim(query_embedding, definition_embeddings).flatten()
+    
+    best_def_idx = sim_scores.argmax().item()
+    best_definition = definitions[best_def_idx]
+    
+    # Construct the policy reason
+    result['PolicyReason'] = (
+        f"Violates definition: **'{best_definition}'**."
+    )
+    
+    return result
 
 def classify_report_category(review_text):
     """Mengklasifikasikan teks review ke salah satu kategori report dan mengembalikan alasannya."""
