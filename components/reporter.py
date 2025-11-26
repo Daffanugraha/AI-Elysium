@@ -129,7 +129,7 @@ def auto_report_review(row, report_type=None):
     try:
         apply_cookies_to_driver(driver, cookies)
         # Jeda acak untuk apply cookies
-        time.sleep(random.uniform(2, 4))
+        time.sleep(random.uniform(1, 3))
         driver.get("https://www.google.com/maps")
         if not check_logged_in_via_driver(driver, timeout=3):
             st.warning(f"Invalid cookies for {report_email} — login may need to be repeated")
@@ -156,12 +156,12 @@ def auto_report_review(row, report_type=None):
         except Exception as e:
             st.warning(f"Gagal membuka link Google Maps: {e}")
 
-        time.sleep(random.uniform(2, 5)) # Jeda acak yang lebih panjang untuk loading halaman
+        time.sleep(random.uniform(1, 3)) # Jeda acak yang lebih panjang untuk loading halaman
 
         try:
             tab = driver.find_element(By.XPATH, "//button[contains(., 'Reviews') or contains(., 'Ulasan')]")
             ActionChains(driver).move_to_element(tab).click().perform() 
-            time.sleep(random.uniform(3, 4)) # Jeda yang diperpanjang
+            time.sleep(random.uniform(1, 3)) # Jeda yang diperpanjang
         except Exception:
             st.error("tidak bisa buka tab review")
             driver.quit()
@@ -189,7 +189,7 @@ def auto_report_review(row, report_type=None):
         # --- Logika Scroll dan Pencarian Dioptimalkan ---
 # --- Logika Scroll dan Pencarian Dioptimalkan ---
         try:
-            scroll_area = WebDriverWait(driver, 4).until(
+            scroll_area = WebDriverWait(driver, 3).until(
                 EC.presence_of_element_located((By.XPATH, "//div[contains(@class,'m6QErb') and contains(@class,'DxyBCb')]"))
             )
             target = None
@@ -213,10 +213,10 @@ def auto_report_review(row, report_type=None):
                 current_scroll_pos_int = int(current_scroll_pos) # Pastikan current_scroll_pos adalah integer
                 
                 # Scroll dalam langkah kecil (lebih manusiawi)
-                new_scroll_pos_int = current_scroll_pos_int + 300 
+                new_scroll_pos_int = current_scroll_pos_int + 400 
                 
                 # ✅ PERBAIKAN: Gunakan nilai integer yang sudah dikonversi
-                for step in range(current_scroll_pos_int, new_scroll_pos_int, 70): # 50px per langkah
+                for step in range(current_scroll_pos_int, new_scroll_pos_int, 100): # 50px per langkah
                     driver.execute_script(f"arguments[0].scrollTop = {step}", scroll_area)
                     time.sleep(0.3) # Jeda per langkah scroll ditingkatkan sedikit
                 
@@ -369,12 +369,12 @@ def auto_report_review(row, report_type=None):
             driver.quit()
             return
 
-        time.sleep(random.uniform(2, 4)) # Jeda panjang setelah memilih kategori
+        time.sleep(random.uniform(1, 3)) # Jeda panjang setelah memilih kategori
 
         # --- KLIK FINAL MENGGUNAKAN ACTIONCHAINS ---
         try:
             # Tunggu tombol submit muncul (menggunakan XPath umum)
-            submit_button = WebDriverWait(driver, 4).until(
+            submit_button = WebDriverWait(driver, 3).until(
                 EC.element_to_be_clickable((By.XPATH, 
                     "//button[contains(., 'Submit') or contains(., 'Laporkan') or contains(., 'Kirim') or contains(., 'Report') or contains(., 'Done') or contains(., 'Selesai')]"))
             )
@@ -396,7 +396,7 @@ def auto_report_review(row, report_type=None):
         res_submit = "⚠️ UNKNOWN"
         try:
             # Pengecekan konfirmasi sukses
-            WebDriverWait(driver, 4).until( 
+            WebDriverWait(driver, 3).until( 
                 EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Report received') or contains(text(), 'Laporan diterima')]"))
             )
             res_submit = "✅ SUCCESS" 
