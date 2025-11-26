@@ -30,9 +30,9 @@ def load_semantic_model():
 
 MODEL, CATEGORY_EMBEDDINGS = load_semantic_model()
 
-
+ 
 # --- FUNGSI BARU UNTUK MENGEKSTRAK ALASAN (KEY TOKENS) ---
-@st.cache_data
+# @st.cache_data
 def extract_key_tokens(text, target_category, n_tokens=4):
     """
     Mengekstrak N token kunci dari teks yang paling berkontribusi pada kesamaan dengan kategori target.
@@ -79,7 +79,7 @@ def extract_key_tokens(text, target_category, n_tokens=4):
     return ", ".join(key_tokens)
 # --------------------------------------------------------
 
-@st.cache_data
+# @st.cache_data
 def get_validation_details(review_text: str, category_ai: str, score: float, key_tokens_str: str) -> dict:
     """
     Finds the specific policy reason from CATEGORY_DEFINITIONS and extracts the contextual sentence.

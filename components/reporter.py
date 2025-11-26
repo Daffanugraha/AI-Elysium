@@ -92,10 +92,31 @@ def auto_report_review(row, report_type=None):
 
     # Inisialisasi Options untuk uc
     options = uc.ChromeOptions()
-    options.add_argument("--start-maximized")
+# 1. Opsi Bahasa (Memaksa ke English untuk Konsistensi Locator)
+    options.add_argument("--lang=en-US")
+    options.add_argument("--accept-lang=en-US,en;q=0.9") 
+    
+    # 2. Opsi Stabilitas dan Efisiensi (Penambahan Anda)
+    
+    # Menonaktifkan ekstensi dan pop-up (mengurangi beban)
+    options.add_argument("--disable-extensions") 
+    options.add_argument("--disable-popup-blocking")
+    
+    # Mengurangi penggunaan GPU rendering (sering menyebabkan Stacktrace pada server headless)
+    options.add_argument("--disable-gpu") 
+    
+    #options.add_argument("--start-maximized") # Tetap pertahankan ini untuk kompatibilitas
+    options.add_argument("--window-size=1200,800")
+    options.add_argument("--window-position=-1800,0")
+
+    
+    # 3. Opsi Undetected-Chromedriver & Security (Wajib)
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-dev-shm-usage") # Penting untuk lingkungan Linux/Docker
+    options.add_argument("--disable-background-timer-throttling")
+    options.add_argument("--disable-backgrounding-occluded-windows") # <-- Tambahkan ini
+    options.add_argument("--force-device-scale-factor=1") # <-- Tambahkan ini untuk konsistensi UI
 
     try:
         # Gunakan undetected-chromedriver
@@ -103,16 +124,17 @@ def auto_report_review(row, report_type=None):
     except Exception as e:
         st.error(f"❌ Gagal inisialisasi Undetected-Chromedriver: {e}")
         return
+        
     
     try:
         apply_cookies_to_driver(driver, cookies)
         # Jeda acak untuk apply cookies
         time.sleep(random.uniform(2, 4))
         driver.get("https://www.google.com/maps")
-        if not check_logged_in_via_driver(driver, timeout=5):
+        if not check_logged_in_via_driver(driver, timeout=3):
             st.warning(f"Invalid cookies for {report_email} — login may need to be repeated")
         else:
-            st.info(f"Reporting menggunakan akun: **{report_email}**")
+            st.info(f"Reporting using an account: **{report_email}**")
     except Exception as e:
         st.warning(f"Fail apply cookies or initial navigation for report user: {e}")
         driver.quit()
@@ -134,12 +156,12 @@ def auto_report_review(row, report_type=None):
         except Exception as e:
             st.warning(f"Gagal membuka link Google Maps: {e}")
 
-        time.sleep(random.uniform(2, 4)) # Jeda acak yang lebih panjang untuk loading halaman
+        time.sleep(random.uniform(2, 5)) # Jeda acak yang lebih panjang untuk loading halaman
 
         try:
             tab = driver.find_element(By.XPATH, "//button[contains(., 'Reviews') or contains(., 'Ulasan')]")
             ActionChains(driver).move_to_element(tab).click().perform() 
-            time.sleep(random.uniform(2, 4)) # Jeda yang diperpanjang
+            time.sleep(random.uniform(3, 4)) # Jeda yang diperpanjang
         except Exception:
             st.error("tidak bisa buka tab review")
             driver.quit()
@@ -149,7 +171,7 @@ def auto_report_review(row, report_type=None):
         try:
             sort_button = driver.find_element(By.XPATH, "//button[contains(., 'Sort') or contains(., 'Urutkan')]")
             driver.execute_script("arguments[0].click();", sort_button)
-            time.sleep(random.uniform(2, 4))
+            time.sleep(random.uniform(1, 3))
             lowest = driver.find_elements(By.XPATH, "//*[contains(text(), 'Lowest rating') or contains(text(), 'Peringkat terendah')]")
             for opt in lowest:
                 try:
@@ -157,7 +179,7 @@ def auto_report_review(row, report_type=None):
                     break
                 except:
                     continue
-            time.sleep(random.uniform(2, 4))
+            time.sleep(random.uniform(1, 3))
         except Exception:
             pass
 
@@ -167,7 +189,7 @@ def auto_report_review(row, report_type=None):
         # --- Logika Scroll dan Pencarian Dioptimalkan ---
 # --- Logika Scroll dan Pencarian Dioptimalkan ---
         try:
-            scroll_area = WebDriverWait(driver, 2).until(
+            scroll_area = WebDriverWait(driver, 4).until(
                 EC.presence_of_element_located((By.XPATH, "//div[contains(@class,'m6QErb') and contains(@class,'DxyBCb')]"))
             )
             target = None
@@ -191,12 +213,12 @@ def auto_report_review(row, report_type=None):
                 current_scroll_pos_int = int(current_scroll_pos) # Pastikan current_scroll_pos adalah integer
                 
                 # Scroll dalam langkah kecil (lebih manusiawi)
-                new_scroll_pos_int = current_scroll_pos_int + 400 
+                new_scroll_pos_int = current_scroll_pos_int + 300 
                 
                 # ✅ PERBAIKAN: Gunakan nilai integer yang sudah dikonversi
-                for step in range(current_scroll_pos_int, new_scroll_pos_int, 100): # 50px per langkah
+                for step in range(current_scroll_pos_int, new_scroll_pos_int, 70): # 50px per langkah
                     driver.execute_script(f"arguments[0].scrollTop = {step}", scroll_area)
-                    time.sleep(0.003) # Jeda per langkah scroll ditingkatkan sedikit
+                    time.sleep(0.3) # Jeda per langkah scroll ditingkatkan sedikit
                 
                 # ... (Logika pengecekan scroll_height dan break tetap sama)
                 new_scroll_height = driver.execute_script("return arguments[0].scrollHeight", scroll_area)
@@ -223,13 +245,13 @@ def auto_report_review(row, report_type=None):
             return
 
         driver.execute_script("arguments[0].scrollIntoView({behavior:'smooth',block:'center'});", target)
-        time.sleep(random.uniform(2, 3))
+        time.sleep(random.uniform(1, 3))
 
         # klik titik tiga
         try:
             menu_el = target.find_element(By.XPATH, "./ancestor::div[contains(@class,'jftiEf')]//div[@class='zjA77']")
             ActionChains(driver).move_to_element(menu_el).click().perform()
-            time.sleep(random.uniform(2, 3))
+            time.sleep(random.uniform(1, 3))
         except Exception:
             driver.quit()
             return
@@ -251,7 +273,7 @@ def auto_report_review(row, report_type=None):
             return
 
         st.toast(f"✅ click ‘report review’ to {row['User']}")
-        time.sleep(random.uniform(2, 3)) # Jeda diperpanjang sebelum klik kategori
+        time.sleep(random.uniform(3, 4)) # Jeda diperpanjang sebelum klik kategori
 
         tabs = driver.window_handles
         if len(tabs) > 1:
@@ -352,11 +374,10 @@ def auto_report_review(row, report_type=None):
         # --- KLIK FINAL MENGGUNAKAN ACTIONCHAINS ---
         try:
             # Tunggu tombol submit muncul (menggunakan XPath umum)
-            submit_button = WebDriverWait(driver, 7).until(
+            submit_button = WebDriverWait(driver, 4).until(
                 EC.element_to_be_clickable((By.XPATH, 
                     "//button[contains(., 'Submit') or contains(., 'Laporkan') or contains(., 'Kirim') or contains(., 'Report') or contains(., 'Done') or contains(., 'Selesai')]"))
             )
-            st.info("✅ Siap klik tombol submit")
         except Exception as e:
             st.error(f"❌ Tombol Submit tidak ditemukan. Error: {e}")
             driver.quit()
@@ -375,7 +396,7 @@ def auto_report_review(row, report_type=None):
         res_submit = "⚠️ UNKNOWN"
         try:
             # Pengecekan konfirmasi sukses
-            WebDriverWait(driver, 7).until( 
+            WebDriverWait(driver, 4).until( 
                 EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Report received') or contains(text(), 'Laporan diterima')]"))
             )
             res_submit = "✅ SUCCESS" 

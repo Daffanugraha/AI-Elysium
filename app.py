@@ -101,7 +101,7 @@ inject_background_base64("static\Background.jpg")
 
 # Memuat CSS kustom untuk styling komponen (diambil dari main.css)
 def local_css(file_name):
-    with open(file_name) as f:
+    with open(file_name, encoding="utf-8") as f:
         st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
 local_css("styles/main.css") # Muat CSS utama
@@ -111,7 +111,6 @@ local_css("styles/main.css") # Muat CSS utama
 with st.sidebar:
     st.markdown("<h4 style='color: #FFD700;'>AI ELYSIUM</h4>", unsafe_allow_html=True)
     st.markdown("<p style='color: #A9E4D7; font-size: small;'>Pure Intelligence. Think Beyond. Think Elysium.</p>", unsafe_allow_html=True)
-    st.markdown("---")
 
 # --- Inisialisasi Session State & Cookies + JSON Persistensi ---
 load_all_cookies() # Memuat cookies dari disk
@@ -248,50 +247,89 @@ with col_main:
         st.divider()
         st.subheader(f"📊 Reviews to Report from: {st.session_state.place_name}")
 
+        
+# --- PENGATURAN TIGA FILTER DALAM SATU BARIS (MENGGUNAKAN st.columns) ---
+        col_status, col_ai, col_page = st.columns([1, 1, 0.5]) # Sesuaikan rasio lebar kolom
+
+        # 1. Filter Status Report (di kolom 1)
+        with col_status:
+            report_status_options = ["All Reviews", "Only Unreported Reviews"]
+            selected_report_status = st.selectbox(
+                "Filter by Report Status:",
+                report_status_options,
+                key="filter_report_status",
+                label_visibility="visible" # Pastikan label terlihat
+            )
+
+        # 2. Filter Prediksi AI (di kolom 2)
+        with col_ai:
+            ai_categories = ["All Categories"] + sorted(list(REPORT_CATEGORIES))
+            selected_ai_category = st.selectbox(
+                "Filter by AI Prediction Category:",
+                ai_categories,
+                key="filter_ai_category",
+                label_visibility="visible"
+            )
+        
+        df_filtered = df.copy()
+        
+        # Logika Filter Report Status
+        if selected_report_status == "Only Unreported Reviews":
+            reporter_email_key = get_current_reporter_email_key()
+            if reporter_email_key in st.session_state.report_history:
+                reported_keys = set(st.session_state.report_history[reporter_email_key].keys())
+                
+                # Tambahkan kolom sementara 'is_reported'
+                df_filtered['review_key'] = df_filtered.apply(generate_review_key, axis=1)
+                df_filtered = df_filtered[~df_filtered['review_key'].isin(reported_keys)]
+                df_filtered = df_filtered.drop(columns=['review_key'])
+            else:
+                # Jika tidak ada history report, tidak perlu filter (semua belum direport)
+                pass
+
+        # Logika Filter Prediksi AI
+        if selected_ai_category != "All Categories":
+            
+            # Catatan: Karena 'category_ai' tidak ada di df asli (hanya dihitung saat iterasi), 
+            # kita perlu menghitung/menyimpan prediksinya terlebih dahulu untuk filtering.
+            
+            # --- Perhitungan Kategori AI (Hanya dilakukan jika filternya aktif) ---
+            # Idealnya ini dilakukan saat scraping, tapi karena tidak, kita hitung ulang.
+            
+            # Memastikan kolom 'category_ai_temp' ada untuk filtering
+            if 'category_ai_temp' not in df_filtered.columns:
+                # Menggunakan @st.cache_data untuk mempercepat jika data sama
+                @st.cache_data
+                def compute_ai_categories(df_input):
+                    df_copy = df_input.copy()
+                    categories = []
+                    for index, row in df_copy.iterrows():
+                        category_ai, _, _ = classify_report_category(row["Review Text"])
+                        categories.append(category_ai)
+                    df_copy['category_ai_temp'] = categories
+                    return df_copy
+                
+                df_filtered = compute_ai_categories(df_filtered)
+            
+            df_filtered = df_filtered[df_filtered['category_ai_temp'] == selected_ai_category]
+            
+        # Gunakan df_filtered yang baru untuk paginasi dan tampilan selanjutnya
+        df = df_filtered # Ganti referensi df ke df_filtered
+
         # --- 2. Logika Paginasi & Display ---
-        per_page_option = st.selectbox("Show reviews per page:", [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, "All"], key="per_page_select")
+        with col_page:
+            per_page_option = st.selectbox(
+                "Show reviews per page:", 
+                [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, "All"], 
+                key="per_page_select",
+                label_visibility="visible"
+            )
 
         start_idx = 0
         end_idx = len(df)
         df_show = df
 
-        if per_page_option != "All":
-            per_page = int(per_page_option)
-            total_pages = (len(df) - 1) // per_page + 1
-
-            if "current_page" not in st.session_state:
-                st.session_state.current_page = 1
-            
-            if st.session_state.get("prev_per_page") != per_page:
-                st.session_state.current_page = 1
-                st.session_state.prev_per_page = per_page
-
-            def set_page(p):
-                st.session_state.current_page = p
-
-            page = st.session_state.current_page
-            start_idx = (page - 1) * per_page
-            end_idx = start_idx + per_page
-            df_show = df.iloc[start_idx:end_idx]
-            
-            st.write(f"Showing {start_idx+1}–{min(end_idx, len(df))} of {len(df)} total reviews.")
-
-            # Tombol navigasi paginasi
-            page_start = max(1, page - 4)
-            page_end = min(total_pages, page + 5)
-            page_nums = list(range(page_start, page_end + 1))
-            
-            page_cols = st.columns(min(len(page_nums), 10))
-            
-            for i, page_num in enumerate(page_nums):
-                if i < len(page_cols):
-                    with page_cols[i]:
-                        if st.button(str(page_num), key=f"page_btn_{page_num}", type="primary" if page_num == page else "secondary"):
-                            set_page(page_num)
-                            st.rerun()
-
         # --- 3. Report Massal Section ---
-        st.markdown("---") 
         st.subheader("🤖 Automatic Report (This Page Only)")
         
         selected_report_category = st.selectbox(
@@ -301,7 +339,7 @@ with col_main:
         )
         
         confirmation_placeholder = st.empty()
-        
+
         col_set, col_exec = st.columns([1, 1])
 
         def set_global_category_action():
@@ -364,6 +402,43 @@ with col_main:
                         if st.button("❌ Cancel", key="cancel_set_category"):
                             confirmation_placeholder.empty() 
                             st.info("Category change cancelled.")
+                            
+        if per_page_option != "All":
+            per_page = int(per_page_option)
+            total_pages = (len(df) - 1) // per_page + 1
+
+            if "current_page" not in st.session_state:
+                st.session_state.current_page = 1
+            
+            if st.session_state.get("prev_per_page") != per_page:
+                st.session_state.current_page = 1
+                st.session_state.prev_per_page = per_page
+
+            def set_page(p):
+                st.session_state.current_page = p
+
+            page = st.session_state.current_page
+            start_idx = (page - 1) * per_page
+            end_idx = start_idx + per_page
+            df_show = df.iloc[start_idx:end_idx]
+            
+            st.write(f"Showing {start_idx+1}–{min(end_idx, len(df))} of {len(df)} total reviews.")
+
+            # Tombol navigasi paginasi
+            page_start = max(1, page - 4)
+            page_end = min(total_pages, page + 5)
+            page_nums = list(range(page_start, page_end + 1))
+            
+            page_cols = st.columns(min(len(page_nums), 10))
+            
+            for i, page_num in enumerate(page_nums):
+                if i < len(page_cols):
+                    with page_cols[i]:
+                        if st.button(str(page_num), key=f"page_btn_{page_num}", type="primary" if page_num == page else "secondary"):
+                            set_page(page_num)
+                            st.rerun()
+        
+                
 
         # Tombol Eksekusi / Stop / Resume
 # Tombol Eksekusi / Stop / Resume
@@ -449,8 +524,8 @@ with col_main:
                             }
                             save_report_history(st.session_state.report_history) # Simpan ke disk
                             
-                            status_container.success(f"✅ Success reporting {row['User']}. Waiting 3s...")
-                            time.sleep(3) # Jeda antar report
+                            status_container.success(f"✅ Success reporting {row['User']} as '{current_report_choice}'.")
+                            time.sleep(1.5) # Jeda antar report
                         else:
                             status_container.warning(f"Failed to report review from {row['User']}. Stopping page report. Details: {report_result}")
                             #st.session_state.is_reporting = False
@@ -520,8 +595,6 @@ with col_main:
                         # 🔑 CATATAN: Sebelum RERUN, pastikan driver sudah dibuat dan disimpan 
                         # di st.session_state.driver (Logika ini harus ada di tempat lain)
                         st.rerun() 
-
-        st.markdown("---")
 
 # ... (Sisa kode Report Tunggal dan Tampilan Log tidak berubah)
         # --- 4. Tampilan Review Perorangan (dengan SelectBox & Button) ---

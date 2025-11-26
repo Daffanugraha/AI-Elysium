@@ -17,14 +17,15 @@
     /* Background lebih solid (0.98) */
     background: rgba(10, 12, 20, 0.98); 
     border-radius: 16px;
-    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.5); 
+    /* Efek glow boundary lebih tajam */
+    box-shadow: 0 0 20px rgba(0, 191, 255, 0.15), 0 0 40px rgba(0, 191, 255, 0.05); /* Tambah kedalaman */
 }
 header[data-testid="stHeader"] {
     font-family: 'Inter', sans-serif !important;
     /* Background lebih solid (0.95) */
     background: rgba(0, 10, 48, 0.95); 
-    border-bottom: 1px solid rgba(0, 140, 255, 0.25);
-    box-shadow: 0 0 25px rgba(0, 140, 255, 0.2);
+    border-bottom: 1px solid rgba(0, 140, 255, 0.5); /* Border lebih tegas */
+    box-shadow: 0 0 15px rgba(0, 140, 255, 0.4); /* Shadow lebih kuat */
     backdrop-filter: blur(4px);
 }
 div[data-testid="stSidebar"] *, 
@@ -40,21 +41,19 @@ h1 {
     text-align: center;
     color: #00BFFF;
     text-transform: uppercase;
-    /* UKURAN DIKURANGI ke 1.9em */
     font-size: 1.9em !important; 
-    font-weight: 600 !important; 
-    text-shadow: 0 0 15px rgba(0, 191, 255, 0.7),
-                 0 0 40px rgba(0, 191, 255, 0.4);
+    font-weight: 700 !important; /* Dibuat lebih tebal */
+    text-shadow: 0 0 10px rgba(0, 191, 255, 1.0), /* Glow lebih terang */
+                 0 0 30px rgba(0, 191, 255, 0.5);
     margin-bottom: 0.3em;
 }
 
 h3 {
     font-family: 'Orbitron', sans-serif !important;
-    text-align: center;
+    text-align: left; 
     color: #A7C7FF;
-    font-weight: 400;
+    font-weight: 500; /* Dibuat lebih tebal dari 400 */
     letter-spacing: 1px;
-    /* UKURAN DIKURANGI ke 1.15em */
     font-size: 1.15em !important; 
 }
 
@@ -62,76 +61,109 @@ h3 {
 h2 {
     font-family: 'Orbitron', sans-serif !important;
     color: #00BFFF;
-    border-left: 4px solid #00BFFF;
+    border-left: 5px solid #33E4FF; /* Border lebih cerah dan tebal */
     padding-left: 10px;
-    text-shadow: 0 0 8px rgba(0, 191, 255, 0.5);
-    /* UKURAN DIKURANGI ke 1.4em */
+    text-shadow: 0 0 10px rgba(0, 191, 255, 0.7); /* Glow lebih kuat */
     font-size: 1.4em !important; 
+    margin-top: 1.5rem; 
+    margin-bottom: 0.8rem;
 }
 
 /* ------------------------------------------- */
 /* --- Inputs & Selects (NEON TERANG) --- */
 /* ------------------------------------------- */
-input, textarea, select {
+
+label[data-testid*="stWidgetLabel"] {
+    color: #33E4FF; 
+    font-weight: 600;
+    font-size: 0.95em !important;
+}
+
+/* Target Input (text, textarea) dan Selectbox field yang terlihat */
+input,
+textarea,
+select,
+div[data-testid="stSelectbox"] > div:nth-child(2),
+div[data-testid="stTextInput"] > div:nth-child(2)
+{
     font-family: 'Inter', sans-serif !important; 
-    /* Background transparan gelap agar neon terlihat */
-    background-color: rgba(26, 31, 51, 0.7) !important; 
+    /* Background transparan gelap */
+    background-color: rgba(26, 31, 51, 0.9) !important; 
     color: #E8F0FF !important;
     
-    /* Border dengan warna neon */
+    /* Border yang tajam */
     border: 1px solid #00BFFF !important; 
-    border-radius: 8px !important;
+    border-radius: 4px; /* Dibuat lebih kotak (tajam) */
     
-    /* Efek Neon (Box Shadow) */
-    box-shadow: 0 0 10px rgba(0, 191, 255, 0.5), 
-                inset 0 0 10px rgba(0, 191, 255, 0.3) !important;
+    /* Efek Neon - Tipis dan Elegan */
+    box-shadow: 0 0 4px rgba(0, 191, 255, 0.6), /* Glow yang sedikit lebih kuat */
+                inset 0 0 4px rgba(0, 191, 255, 0.2) !important;
     
-    /* UKURAN DIKURANGI ke 0.9em */
     font-size: 0.9em !important; 
 }
 
+/* ⚠️ Perbaikan Selectbox: Paksa elemen di dalam selectbox menjadi transparan/gelap */
+/* Ini memastikan nilai yang dipilih di dalam kotak selectbox tidak memiliki background putih */
+div[data-testid="stSelectbox"] div[data-testid="stNoOptions"],
+div[data-testid="stSelectbox"] div[data-testid="stNoOptions"] * {
+    background-color: transparent !important;
+    color: #E8F0FF !important;
+}
+
+/* Selector yang menargetkan span/div yang menampilkan teks nilai terpilih (agresif) */
+div[data-testid="stSelectbox"] > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) {
+    background-color: transparent !important;
+}
+
+
 /* Efek Neon saat di-fokus (diklik/diisi) */
-input:focus, textarea:focus, select:focus {
-    border-color: #33E4FF !important; /* Warna border lebih terang saat fokus */
-    box-shadow: 0 0 15px #33E4FF, 
-                0 0 25px rgba(51, 228, 255, 0.4) !important; /* Efek neon yang lebih kuat */
+input:focus,
+textarea:focus,
+select:focus,
+div[data-testid="stSelectbox"] > div:nth-child(2):focus-within {
+    border-color: #33E4FF !important; 
+    /* Efek neon kuat saat fokus */
+    box-shadow: 0 0 20px #33E4FF, 
+                0 0 40px rgba(51, 228, 255, 0.6) !important; 
 }
 
 /* Panah dropdown selectbox */
 .st-emotion-cache-1c9fsgq svg {
-    fill: #00BFFF !important;
+    fill: #33E4FF !important; /* Panah dibuat lebih cerah */
 }
 
 /* ------------------------------------------- */
 /* --- Buttons (MENGGUNAKAN ORBITRON) --- */
 /* ------------------------------------------- */
 .stButton>button {
-    font-weight: 600;
+    font-weight: 700; /* Lebih tebal */
     font-family: 'Orbitron', sans-serif !important; 
-    border-radius: 10px;
-    padding: 0.5rem 1.0rem;
-    transition: all 0.25s ease;
-    box-shadow: 0 0 8px rgba(0, 191, 255, 0.3);
+    border-radius: 8px; /* Lebih kotak */
+    padding: 0.7rem 1.3rem; /* Padding lebih besar */
+    transition: all 0.3s ease;
+    box-shadow: 0 0 15px rgba(0, 191, 255, 0.5); /* Shadow lebih menonjol */
     border: none;
-    /* UKURAN DIKURANGI ke 0.85em */
     font-size: 0.85em !important; 
 }
 .stButton>button[kind="primary"] {
     background: linear-gradient(135deg, #008CFF, #00D4FF);
-    color: white;
+    color: #05060A; /* Teks gelap di tombol cerah */
 }
 .stButton>button[kind="primary"]:hover {
     background: linear-gradient(135deg, #00A6FF, #33E4FF);
-    box-shadow: 0 0 15px rgba(0, 191, 255, 0.6);
-    transform: translateY(-1px);
+    box-shadow: 0 0 30px rgba(0, 191, 255, 0.9); /* Hover glow maksimal */
+    transform: translateY(-3px); /* Efek naik lebih dramatis */
 }
 .stButton>button[kind="secondary"] {
     background: #151825; 
     color: #B0C4FF;
+    border: 1px solid #33E4FF; /* Border cerah untuk sekunder */
+    box-shadow: 0 0 5px rgba(51, 228, 255, 0.3);
 }
 .stButton>button[kind="secondary"]:hover {
     background: #1C2030; 
     transform: translateY(-1px);
+    box-shadow: 0 0 10px rgba(51, 228, 255, 0.6);
 }
 
 
@@ -140,49 +172,48 @@ input:focus, textarea:focus, select:focus {
 /* ------------------------------------------- */
 div[data-testid="stAlert"] {
     border-radius: 10px;
-    border-left: 5px solid #00BFFF;
-    background-color: rgba(0, 191, 255, 0.1);
-    box-shadow: 0 0 10px rgba(0, 191, 255, 0.2);
-    /* UKURAN DIKURANGI ke 0.9em */
+    border-left: 5px solid #33E4FF; /* Border cerah */
+    background-color: rgba(51, 228, 255, 0.1); 
+    box-shadow: 0 0 15px rgba(51, 228, 255, 0.2); /* Shadow lebih kuat */
     font-size: 0.9em !important; 
 }
 
+/* 🟢 PERBAIKAN stContainer (Review Card) */
 .stContainer {
-    /* Background lebih solid (0.98) */
-    background: rgba(15, 18, 30, 0.98); 
-    border-radius: 12px;
-    padding: 1.0rem 1.0rem; 
-    border: 1px solid rgba(0, 191, 255, 0.1); 
-    transition: 0.25s ease;
+    background: rgba(15, 18, 30, 0.90); /* Sedikit lebih gelap/lebih transparan */
+    border-radius: 8px; /* Lebih kotak */
+    padding: 1.2rem; 
+    border: 1px solid rgba(0, 191, 255, 0.3); /* Border lebih terlihat */
+    transition: 0.3s ease;
+    margin-bottom: 1.2rem; /* Jarak antar review lebih besar */
 }
 .stContainer:hover {
-    box-shadow: 0 0 20px rgba(0, 191, 255, 0.2); 
-    transform: translateY(-2px); 
+    box-shadow: 0 0 30px rgba(0, 191, 255, 0.4); /* Hover glow yang dramatis */
+    transform: translateY(-3px); /* Efek hover lebih jelas */
+    border-color: #33E4FF; 
 }
 
 hr, .st-emotion-cache-1pxn4x5 {
     border: none;
     height: 1px;
-    background: linear-gradient(90deg, rgba(0,191,255,0.4), rgba(255,255,255,0.1));
+    background: linear-gradient(90deg, #33E4FF, rgba(255,255,255,0.1)); /* Gradien lebih cerah */
 }
 
 footer, .stCaption, .st-emotion-cache-1wmy99l {
     color: #8DA6D6;
     text-align: center;
-    /* UKURAN DIKURANGI ke 0.7em */
     font-size: 0.7em !important; 
     font-family: 'Inter', sans-serif !important;
 }
 
 img {
-    border-radius: 10px;
+    border-radius: 8px; /* Lebih kotak */
     display: block;
     margin: auto;
 }
 
 p, .st-emotion-cache-16ids9n {
     font-family: 'Inter', sans-serif !important;
-    /* UKURAN DIKURANGI ke 0.9em */
     font-size: 0.9em !important; 
 }
 
@@ -193,16 +224,14 @@ p, .st-emotion-cache-16ids9n {
 
 /* Menargetkan kontainer popup yang muncul saat selectbox diklik */
 div.st-bd.st-bu {
-    /* Background kontainer popup dibuat sangat gelap */
     background-color: #0E101A !important; 
-    border: 1px solid #00BFFF !important; 
+    border: 1px solid #33E4FF !important; /* Border cerah */
     border-radius: 8px !important;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.9) !important; /* Shadow lebih dalam */
 }
 
 /* Menargetkan setiap opsi (list item) di dalam dropdown */
 div[data-testid="stVirtualList"] div {
-    /* Warna teks opsi tetap terang */
     color: #E8F0FF !important; 
     background-color: transparent !important;
     font-size: 0.9em !important;
@@ -212,8 +241,8 @@ div[data-testid="stVirtualList"] div {
 div.st-b4:hover, 
 div.st-b5 {
     /* Background saat di-hover/dipilih dibuat biru muda gelap */
-    background-color: rgba(0, 191, 255, 0.2) !important;
-    color: #00BFFF !important; 
+    background-color: rgba(51, 228, 255, 0.2) !important; /* Warna hover lebih cerah */
+    color: #33E4FF !important; 
 }
 
 
@@ -221,21 +250,42 @@ div.st-b5 {
 /* --- PERBAIKAN GRAFIK ALTAIR (TRANSPARAN) --- */
 /* ------------------------------------------- */
 
-/* Menargetkan kontainer Streamlit untuk grafik (SVG yang dihasilkan Altair) */
 [data-testid="stVegaLiteChart"] svg, 
 [data-testid="stVegaLiteChart"] {
-    /* Paksa background menjadi transparan untuk menghilangkan sisa putih */
     background: transparent !important; 
 }
 
-/* Menargetkan elemen Canvas (jika rendering menggunakan canvas) */
 [data-testid="stVegaLiteChart"] canvas {
     background: transparent !important;
 }
 
-/* Menargetkan elemen div yang membungkus grafik jika masih ada sisa putih */
 .st-emotion-cache-1wmy99l div, 
 .st-emotion-cache-1pxn4x5 div,
 .st-emotion-cache-1j71wlp div {
     background: transparent !important;
+}
+
+/* ------------------------------------------- */
+/* --- TAMBAHAN UNTUK DATAFRAME (TABEL) --- */
+/* ------------------------------------------- */
+
+.stDataFrame {
+    background-color: #151825 !important;
+    color: #E8F0FF !important;
+    border-radius: 8px;
+    overflow: hidden; 
+    border: 1px solid rgba(0, 191, 255, 0.3);
+}
+
+.stDataFrame table th {
+    background-color: #00BFFF !important;
+    color: #05060A !important; 
+    font-weight: 700;
+}
+
+.stDataFrame table tbody tr:nth-child(even) {
+    background-color: #1A1F33 !important;
+}
+.stDataFrame table tbody tr:nth-child(odd) {
+    background-color: #0A0C14 !important;
 }
