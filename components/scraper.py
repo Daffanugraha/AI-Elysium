@@ -80,11 +80,11 @@ def get_low_rating_reviews(gmaps_link, max_scrolls=4000) -> Tuple[pd.DataFrame, 
         # --- HUMAN-SMOOTH SCROLLING PARAMS ---
         MIN_SCROLL_STEP = 700  
         MAX_SCROLL_STEP = 1000  
-        MIN_SLEEP = 0.05       
-        MAX_SLEEP = 0.10       
+        MIN_SLEEP = 0.03       
+        MAX_SLEEP = 0.07       
         READING_INTERVAL = 10 
-        LONG_PAUSE_MIN = 0.3  
-        LONG_PAUSE_MAX = 0.5  
+        LONG_PAUSE_MIN = 0.2  
+        LONG_PAUSE_MAX = 0.4 
         
         # --- Find scrollable reviews element ---
         scrollable_div = None
@@ -193,7 +193,7 @@ def get_low_rating_reviews(gmaps_link, max_scrolls=4000) -> Tuple[pd.DataFrame, 
                 try:
                     more_button = rb.find_element(By.CLASS_NAME, "w8nwRe")
                     driver.execute_script("arguments[0].click();", more_button)
-                    time.sleep(0.05) 
+                    time.sleep(0.03) 
                 except Exception:
                     pass
 

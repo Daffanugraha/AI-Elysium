@@ -156,12 +156,12 @@ def auto_report_review(row, report_type=None):
         except Exception as e:
             st.warning(f"Gagal membuka link Google Maps: {e}")
 
-        time.sleep(random.uniform(1, 3)) # Jeda acak yang lebih panjang untuk loading halaman
+        time.sleep(random.uniform(1, 2)) # Jeda acak yang lebih panjang untuk loading halaman
 
         try:
             tab = driver.find_element(By.XPATH, "//button[contains(., 'Reviews') or contains(., 'Ulasan')]")
             ActionChains(driver).move_to_element(tab).click().perform() 
-            time.sleep(random.uniform(1, 3)) # Jeda yang diperpanjang
+            time.sleep(random.uniform(1, 2)) # Jeda yang diperpanjang
         except Exception:
             st.error("tidak bisa buka tab review")
             driver.quit()
@@ -171,7 +171,7 @@ def auto_report_review(row, report_type=None):
         try:
             sort_button = driver.find_element(By.XPATH, "//button[contains(., 'Sort') or contains(., 'Urutkan')]")
             driver.execute_script("arguments[0].click();", sort_button)
-            time.sleep(random.uniform(1, 3))
+            time.sleep(random.uniform(1, 2))
             lowest = driver.find_elements(By.XPATH, "//*[contains(text(), 'Lowest rating') or contains(text(), 'Peringkat terendah')]")
             for opt in lowest:
                 try:
@@ -179,7 +179,7 @@ def auto_report_review(row, report_type=None):
                     break
                 except:
                     continue
-            time.sleep(random.uniform(1, 3))
+            time.sleep(random.uniform(1, 2))
         except Exception:
             pass
 
@@ -189,7 +189,7 @@ def auto_report_review(row, report_type=None):
         # --- Logika Scroll dan Pencarian Dioptimalkan ---
 # --- Logika Scroll dan Pencarian Dioptimalkan ---
         try:
-            scroll_area = WebDriverWait(driver, 3).until(
+            scroll_area = WebDriverWait(driver, 2).until(
                 EC.presence_of_element_located((By.XPATH, "//div[contains(@class,'m6QErb') and contains(@class,'DxyBCb')]"))
             )
             target = None
@@ -218,7 +218,7 @@ def auto_report_review(row, report_type=None):
                 # ✅ PERBAIKAN: Gunakan nilai integer yang sudah dikonversi
                 for step in range(current_scroll_pos_int, new_scroll_pos_int, 100): # 50px per langkah
                     driver.execute_script(f"arguments[0].scrollTop = {step}", scroll_area)
-                    time.sleep(0.3) # Jeda per langkah scroll ditingkatkan sedikit
+                    time.sleep(0.002) # Jeda per langkah scroll ditingkatkan sedikit
                 
                 # ... (Logika pengecekan scroll_height dan break tetap sama)
                 new_scroll_height = driver.execute_script("return arguments[0].scrollHeight", scroll_area)
@@ -369,12 +369,12 @@ def auto_report_review(row, report_type=None):
             driver.quit()
             return
 
-        time.sleep(random.uniform(1, 3)) # Jeda panjang setelah memilih kategori
+        time.sleep(random.uniform(1, 2)) # Jeda panjang setelah memilih kategori
 
         # --- KLIK FINAL MENGGUNAKAN ACTIONCHAINS ---
         try:
             # Tunggu tombol submit muncul (menggunakan XPath umum)
-            submit_button = WebDriverWait(driver, 3).until(
+            submit_button = WebDriverWait(driver, 2).until(
                 EC.element_to_be_clickable((By.XPATH, 
                     "//button[contains(., 'Submit') or contains(., 'Laporkan') or contains(., 'Kirim') or contains(., 'Report') or contains(., 'Done') or contains(., 'Selesai')]"))
             )
@@ -384,19 +384,19 @@ def auto_report_review(row, report_type=None):
             return
             
         ActionChains(driver).move_to_element(submit_button).perform() 
-        time.sleep(random.uniform(1, 3)) # Jeda manusiawi sebelum klik
+        time.sleep(random.uniform(1, 2)) # Jeda manusiawi sebelum klik
         ActionChains(driver).click().perform()
 
         # --- TUNGGU RESPON SERVER (TITIK KRITIS: JEDA EKSTREM) ---
         res_submit = ""
         # Kita tunggu antara 15 hingga 25 detik untuk memberi waktu Google memproses dan merespons.
-        time.sleep(random.uniform(1, 3)) 
+        time.sleep(random.uniform(1, 2)) 
         
  # 6. Pengecekan Status Sukses/Gagal
         res_submit = "⚠️ UNKNOWN"
         try:
             # Pengecekan konfirmasi sukses
-            WebDriverWait(driver, 3).until( 
+            WebDriverWait(driver, 2).until( 
                 EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Report received') or contains(text(), 'Laporan diterima')]"))
             )
             res_submit = "✅ SUCCESS" 
