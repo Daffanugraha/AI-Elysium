@@ -82,7 +82,7 @@ def get_low_rating_reviews(gmaps_link, max_scrolls=4000) -> Tuple[pd.DataFrame, 
         MAX_SCROLL_STEP = 1000  
         MIN_SLEEP = 0.03       
         MAX_SLEEP = 0.07       
-        READING_INTERVAL = 10 
+        READING_INTERVAL = 3
         LONG_PAUSE_MIN = 0.2  
         LONG_PAUSE_MAX = 0.4 
         
@@ -153,9 +153,9 @@ def get_low_rating_reviews(gmaps_link, max_scrolls=4000) -> Tuple[pd.DataFrame, 
                             break
                         else:
                             driver.execute_script("arguments[0].scrollBy(0, -50);", scrollable_div) 
-                            time.sleep(0.1) 
+                            time.sleep(0.05)
                             driver.execute_script("arguments[0].scrollBy(0, 100);", scrollable_div)
-                            time.sleep(random.uniform(0.2, 0.4)) 
+                            time.sleep(random.uniform(0.1,0.3)) 
                     
                 elif current_scroll_pos != -1:
                     same_pos_count = 0

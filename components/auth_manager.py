@@ -160,7 +160,6 @@ def start_manual_google_login(timeout=LOGIN_TIMEOUT_SECONDS):
 
     try:
         driver.get("https://accounts.google.com/signin/v2/identifier")
-        st.info("Browser terbuka. Silakan **login** di jendela yang muncul.")
         
         st.session_state.login_status = "Waiting for user login..."
         
@@ -213,7 +212,7 @@ def start_manual_google_login(timeout=LOGIN_TIMEOUT_SECONDS):
                 
                 save_cookies(cookies, new_user_id, email)
                 driver.quit()
-                st.session_state.login_status = f"Login berhasil. Cookies saved for: {email}"
+                st.session_state.login_status = f"Login succesful as {email}."
                 return new_user_id
             
             time.sleep(1)

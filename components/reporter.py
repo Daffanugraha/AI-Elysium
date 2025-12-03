@@ -92,7 +92,10 @@ def auto_report_review(row, report_type=None):
 
     # Inisialisasi Options untuk uc
     options = uc.ChromeOptions()
-# 1. Opsi Bahasa (Memaksa ke English untuk Konsistensi Locator)
+    # 1. Opsi Bahasa (Memaksa ke English untuk Konsistensi Locator)
+    options.add_experimental_option('prefs', {
+        'intl.accept_languages': 'en,en_US'
+    })
     options.add_argument("--lang=en-US")
     options.add_argument("--accept-lang=en-US,en;q=0.9") 
     
@@ -117,10 +120,15 @@ def auto_report_review(row, report_type=None):
     options.add_argument("--disable-background-timer-throttling")
     options.add_argument("--disable-backgrounding-occluded-windows") # <-- Tambahkan ini
     options.add_argument("--force-device-scale-factor=1") # <-- Tambahkan ini untuk konsistensi UI
+    options.add_argument("--disable-features=site-per-process") # <-- Tambahkan ini untuk mengurangi iframe issues
 
     try:
         # Gunakan undetected-chromedriver
-        driver = uc.Chrome(options=options)
+        driver = uc.Chrome(
+        options=options,
+        version_main=142,      
+        force_download=True
+        )
     except Exception as e:
         st.error(f"❌ Gagal inisialisasi Undetected-Chromedriver: {e}")
         return
@@ -129,7 +137,9 @@ def auto_report_review(row, report_type=None):
     try:
         apply_cookies_to_driver(driver, cookies)
         # Jeda acak untuk apply cookies
-        time.sleep(random.uniform(1, 3))
+
+        time.sleep(random.uniform(0.5,1.5))#
+
         driver.get("https://www.google.com/maps")
         if not check_logged_in_via_driver(driver, timeout=3):
             st.warning(f"Invalid cookies for {report_email} — login may need to be repeated")
@@ -149,19 +159,24 @@ def auto_report_review(row, report_type=None):
 
         try:
             if gmaps_link_for_report and gmaps_link_for_report.strip():
-                driver.get(gmaps_link_for_report.strip())
+                url_base = gmaps_link_for_report.strip()
+                if '?' in url_base:
+                    final_url = f"{url_base}&hl=en"
+                else:
+                    final_url = f"{url_base}?hl=en"
+                driver.get(final_url)
             else:
                 search_url = f"https://www.google.com/maps/search/{row['Place'].replace(' ', '+')}"
                 driver.get(search_url)
         except Exception as e:
             st.warning(f"Gagal membuka link Google Maps: {e}")
 
-        time.sleep(random.uniform(1, 2)) # Jeda acak yang lebih panjang untuk loading halaman
+        time.sleep(random.uniform(1,3))#a acak yang lebih panjang untuk loading halaman
 
         try:
             tab = driver.find_element(By.XPATH, "//button[contains(., 'Reviews') or contains(., 'Ulasan')]")
             ActionChains(driver).move_to_element(tab).click().perform() 
-            time.sleep(random.uniform(1, 2)) # Jeda yang diperpanjang
+            time.sleep(random.uniform(1,2))
         except Exception:
             st.error("tidak bisa buka tab review")
             driver.quit()
@@ -171,7 +186,7 @@ def auto_report_review(row, report_type=None):
         try:
             sort_button = driver.find_element(By.XPATH, "//button[contains(., 'Sort') or contains(., 'Urutkan')]")
             driver.execute_script("arguments[0].click();", sort_button)
-            time.sleep(random.uniform(1, 2))
+            time.sleep(random.uniform(0.5, 2))
             lowest = driver.find_elements(By.XPATH, "//*[contains(text(), 'Lowest rating') or contains(text(), 'Peringkat terendah')]")
             for opt in lowest:
                 try:
@@ -179,7 +194,7 @@ def auto_report_review(row, report_type=None):
                     break
                 except:
                     continue
-            time.sleep(random.uniform(1, 2))
+            time.sleep(random.uniform(0.5, 2))
         except Exception:
             pass
 
@@ -189,7 +204,7 @@ def auto_report_review(row, report_type=None):
         # --- Logika Scroll dan Pencarian Dioptimalkan ---
 # --- Logika Scroll dan Pencarian Dioptimalkan ---
         try:
-            scroll_area = WebDriverWait(driver, 2).until(
+            scroll_area = WebDriverWait(driver, 3).until(
                 EC.presence_of_element_located((By.XPATH, "//div[contains(@class,'m6QErb') and contains(@class,'DxyBCb')]"))
             )
             target = None
@@ -245,16 +260,28 @@ def auto_report_review(row, report_type=None):
             return
 
         driver.execute_script("arguments[0].scrollIntoView({behavior:'smooth',block:'center'});", target)
-        time.sleep(random.uniform(1, 3))
+        time.sleep(random.uniform(0.5,1.5))#
 
         # klik titik tiga
         try:
+            # 1. Cari elemen menu (titik tiga)
             menu_el = target.find_element(By.XPATH, "./ancestor::div[contains(@class,'jftiEf')]//div[@class='zjA77']")
-            ActionChains(driver).move_to_element(menu_el).click().perform()
-            time.sleep(random.uniform(1, 3))
+            
+            # 2. Scroll elemen agar terlihat
+            driver.execute_script("arguments[0].scrollIntoView({behavior:'smooth',block:'center'});", menu_el)
+            
+            # 3. Klik menggunakan JavaScript untuk stabilitas maksimum
+            driver.execute_script("arguments[0].click();", menu_el)
+            
+            time.sleep(random.uniform(1.5, 2.5)) # Jeda sedikit lebih lama setelah klik penting
         except Exception:
             driver.quit()
             return
+        
+        WebDriverWait(driver, 3).until(
+            EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Report review') or contains(text(), 'Laporkan ulasan')]"))
+        )
+        
 
         js_click_report = """
         const keywords = ['Report review','Laporkan ulasan','Report','Laporkan'];
@@ -369,7 +396,7 @@ def auto_report_review(row, report_type=None):
             driver.quit()
             return
 
-        time.sleep(random.uniform(1, 2)) # Jeda panjang setelah memilih kategori
+        time.sleep(random.uniform(1,3))#a panjang setelah memilih kategori
 
         # --- KLIK FINAL MENGGUNAKAN ACTIONCHAINS ---
         try:
@@ -384,13 +411,13 @@ def auto_report_review(row, report_type=None):
             return
             
         ActionChains(driver).move_to_element(submit_button).perform() 
-        time.sleep(random.uniform(1, 2)) # Jeda manusiawi sebelum klik
+        time.sleep(random.uniform(1,3))#a manusiawi sebelum klik
         ActionChains(driver).click().perform()
 
         # --- TUNGGU RESPON SERVER (TITIK KRITIS: JEDA EKSTREM) ---
         res_submit = ""
         # Kita tunggu antara 15 hingga 25 detik untuk memberi waktu Google memproses dan merespons.
-        time.sleep(random.uniform(1, 2)) 
+        time.sleep(random.uniform(1,3))#
         
  # 6. Pengecekan Status Sukses/Gagal
         res_submit = "⚠️ UNKNOWN"

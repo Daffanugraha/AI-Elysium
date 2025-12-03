@@ -166,7 +166,7 @@ def classify_report_category(review_text):
     """Mengklasifikasikan teks review ke salah satu kategori report dan mengembalikan alasannya."""
     if not review_text or len(review_text.strip()) < 3:
         # Mengembalikan 3 nilai: Kategori, Skor, Alasan
-        return "Off topic", 100.0, "Input teks terlalu singkat atau kosong."
+        return "Off topic", 100.0, "comments are too short or there are no comments."
 
     text_embedding = MODEL.encode(review_text, convert_to_tensor=True)
     # Gunakan util.cos_sim untuk menghitung kesamaan
