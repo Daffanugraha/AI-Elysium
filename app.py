@@ -377,8 +377,8 @@ with col_main:
                 return
                 
             # Lakukan perubahan state pada INDEX ASLI (global_idx) yang digunakan oleh selectbox
-            for global_idx in df_current_page.index: 
-                st.session_state[f"choice_{global_idx}"] = target_category
+            for original_idx in df_current_page.index: 
+                st.session_state[f"choice_{original_idx}"] = target_category
                 
             st.session_state.set_success = True
 
@@ -477,24 +477,27 @@ with col_main:
                 reported_count = 0
                 success_in_run = False
                 status_container = st.empty()
+                final_mass_category = st.session_state.report_all_category_select
 
-                for global_idx, row in df_to_report_page.iterrows(): 
+                for original_idx, row in df_to_report_page.iterrows(): 
                     
-                    # --- Perbaikan 2: Cek Stop di setiap iterasi ---
+                    # --- Cek Stop di setiap iterasi ---
                     if not st.session_state.is_reporting:
                         st.warning(f"Process manually stopped after {reported_count} reports.")
-                        break # Keluar dari loop
+                        break
 
-                    # --- Perbaikan 3: Mengambil Kategori yang Benar (Menggunakan Prediksi AI sebagai Default) ---
-                    current_report_choice = st.session_state.get(f"choice_{global_idx}") 
+                    # 🔑 AMBIL KATEGORI DARI SESSION STATE (Yang sudah diubah user)
+                    choice_key = f"choice_{original_idx}"
+                    current_report_choice = final_mass_category
                     
+                    # Jika belum pernah ada pilihan user, gunakan prediksi AI
                     if current_report_choice is None:
-                        # Jika Selectbox belum pernah disentuh/diinisialisasi, ambil prediksi AI
                         category_ai, _, _ = classify_report_category(row["Review Text"])
-                        current_report_choice = category_ai 
+                        current_report_choice = category_ai
+                        
                     
                     # Cek Anti-Double Report
-                    reporter_email_key = get_current_reporter_email_key() 
+                    reporter_email_key = get_current_reporter_email_key()
                     review_key = generate_review_key(row)
                     already_reported = (
                         reporter_email_key and
@@ -626,6 +629,7 @@ with col_main:
             choice_key = f"choice_{idx}"
             
             if choice_key not in st.session_state:
+                category_ai, _, _ = classify_report_category(row["Review Text"])
                 st.session_state[choice_key] = category_ai
             
             # Tampilan Review dengan Custom Container (Tidak diubah)

@@ -21,7 +21,7 @@ except LookupError:
 @st.cache_resource
 def load_semantic_model():
     """Memuat model Sentence Transformer dan menghitung embedding hanya dari 6 nama kategori."""
-    model = SentenceTransformer("intfloat/multilingual-e5-large")
+    model = SentenceTransformer("intfloat/multilingual-e5-small")
     
     # Menghitung embedding hanya dari 6 nama kategori (Vektor Ringkas)
     category_embeddings = model.encode(REPORT_CATEGORIES, convert_to_tensor=True)
