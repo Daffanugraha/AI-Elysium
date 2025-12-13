@@ -54,7 +54,7 @@ def get_low_rating_reviews(gmaps_link, max_scrolls=4000) -> Tuple[pd.DataFrame, 
             clicked = False
             for opt in options:
                 is_target_option = (option_text in opt.text) or ("Peringkat terendah" in opt.text)
-                                     
+                                                    
                 if opt.is_displayed() and is_target_option:
                     driver.execute_script("arguments[0].click();", opt)
                     clicked = True
@@ -149,7 +149,7 @@ def get_low_rating_reviews(gmaps_link, max_scrolls=4000) -> Tuple[pd.DataFrame, 
                             same_pos_count = 0
                             last_scroll_pos = new_pos
                         
-                        elif same_pos_count >= 5: 
+                        elif same_pos_count >= 3: 
                             break
                         else:
                             driver.execute_script("arguments[0].scrollBy(0, -50);", scrollable_div) 
@@ -272,9 +272,21 @@ def get_low_rating_reviews(gmaps_link, max_scrolls=4000) -> Tuple[pd.DataFrame, 
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option('useAutomationExtension', False)
     options.add_argument("--headless=new")
+    # Paksa Header agar terdeteksi English
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+    options.add_argument("--lang=en-US") 
+    
+    prefs = {
+        "intl.accept_languages": "en,en_US",
+        "profile.default_content_setting_values.notifications": 2
+    }
+    options.add_experimental_option("prefs", prefs)
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    driver.execute_cdp_cmd('Network.setUserAgentOverride', {
+        "userAgent": 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+        "acceptLanguage": "en-US,en;q=0.9"
+    })
     all_low_reviews = []
     place_name = "Unknown_Place"
     
@@ -283,21 +295,59 @@ def get_low_rating_reviews(gmaps_link, max_scrolls=4000) -> Tuple[pd.DataFrame, 
         active_user_data = get_active_cookies_data()
         if active_user_data:
             try:
-                driver.get("https://www.google.com")
+                driver.get("https://www.google.com?hl=en")
                 apply_cookies_to_driver(driver, active_user_data["cookies"])
-                time.sleep(random.uniform(0.3, 0.7)) 
-                driver.get("https://www.google.com/maps")
-                if check_logged_in_via_driver(driver, timeout=2): 
+                time.sleep(random.uniform(1.3, 1.7)) 
+                driver.get("https://www.google.com/maps?hl=en")
+                if check_logged_in_via_driver(driver, timeout=4): 
                     st.success(f"**SUCCESS:** Successfully logged in as **{active_user_data['email']}**.")
                 else:
                     st.warning("Cookies found but seem invalid or expired.")
             except Exception as e:
                 st.warning(f"Failed to apply cookies: {e}")
 
-        # --- 3. Navigation and Place Name Retrieval ---
+        # ==========================================================
+        # --- 3. Navigation and Place Name Retrieval (MODIFIED) ---
+        # ==========================================================
+        
+        # A. Modifikasi Link Awal (Pre-flight Check)
+        if "hl=" not in gmaps_link:
+            if "?" in gmaps_link:
+                gmaps_link += "&hl=en"
+            else:
+                gmaps_link += "?hl=en"
+        else:
+            # Ganti id/in jadi en di link awal
+            gmaps_link = gmaps_link.replace("hl=id", "hl=en").replace("hl=in", "hl=en")
+        
         driver.get(gmaps_link)
-        time.sleep(random.uniform(1.0, 2.0)) 
+        
+        # B. TUNGGU Redirect Selesai (Sangat Penting)
+        # Memberi waktu Google mengubah link pendek menjadi link panjang
+        time.sleep(1.5) 
 
+        # C. CEK LINK PANJANG (Post-flight Check) -> Bagian ini yang Anda minta
+        current_url = driver.current_url
+        
+        # Jika setelah redirect linknya tidak mengandung 'hl=en' (kemungkinan balik ke Indo)
+        if "hl=en" not in current_url:
+            
+            # Buat URL Baru yang Memaksa English
+            new_url = current_url
+            if "hl=" in new_url:
+                new_url = new_url.replace("hl=id", "hl=en").replace("hl=in", "hl=en")
+            else:
+                if "?" in new_url:
+                    new_url += "&hl=en"
+                else:
+                    new_url += "?hl=en"
+            
+            # Reload Halaman dengan URL yang sudah diperbaiki
+            if new_url != current_url:
+                driver.get(new_url)
+                time.sleep(1.0) # Tunggu reload selesai
+        
+        # --- Lanjut Ambil Nama Tempat ---
         try:
             place_name = driver.find_element(By.XPATH, "//h1[contains(@class, 'DUwDvf')]").text.strip()
         except Exception:
@@ -315,7 +365,7 @@ def get_low_rating_reviews(gmaps_link, max_scrolls=4000) -> Tuple[pd.DataFrame, 
             st.warning("Failed to find Reviews tab. Attempting sort/scroll on current page.")
 
         # ==========================================================
-        #           EXECUTE METHOD 1 & METHOD 2
+        #           EXECUTE METHOD 1 & METHOD 2
         # ==========================================================
 
         if review_tab_clicked:
@@ -344,7 +394,7 @@ def get_low_rating_reviews(gmaps_link, max_scrolls=4000) -> Tuple[pd.DataFrame, 
             st.success(f"Method 2 (Default Sort) finished. Total retrieved: **{len(low_reviews_method2)}** 1 & 2 star reviews.")
 
         # ==========================================================
-        #           5. Final Processing (Dedup)
+        #           5. Final Processing (Dedup)
         # ==========================================================
         
         df_raw = pd.DataFrame(all_low_reviews)

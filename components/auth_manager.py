@@ -35,19 +35,81 @@ def get_cookie_file_path(user_id):
     return os.path.join(COOKIES_DIR, f"{user_id}.pkl")
 
 def save_cookies(cookies, user_id, email=None):
-    """Menyimpan cookies ke file dan session state."""
+    """
+    Menyimpan cookies ke file .pkl dan session state.
+    FITUR TAMBAHAN: Otomatis memaksa settingan bahasa ke English (L=en).
+    """
+
+    # -----------------------------------------------------------
+    # 1. PROSES EDIT COOKIES (FORCE ENGLISH)
+    # -----------------------------------------------------------
+    processed_cookies = []
+    pref_found = False
+
+    for c in cookies:
+        if c.get('name') == 'PREF':
+            pref_found = True
+            current_val = c.get('value', '')
+            
+            # A. Bersihkan format URL 'hl=' yang salah
+            if 'hl=id' in current_val: current_val = current_val.replace('hl=id', 'L=en')
+            if 'hl=en' in current_val: current_val = current_val.replace('hl=en', 'L=en')
+            
+            # B. Ubah settingan Bahasa Indonesia (L=id) ke Inggris
+            if 'L=id' in current_val:  current_val = current_val.replace('L=id', 'L=en')
+            
+            # C. Jika belum ada parameter L=en, tambahkan
+            if 'L=en' not in current_val:
+                if current_val:
+                    # Tambahkan di belakang (separator titik dua)
+                    current_val = current_val.rstrip(':') + ":L=en"
+                else:
+                    current_val = "L=en"
+            
+            c['value'] = current_val
+            
+        processed_cookies.append(c)
+
+    # D. Jika Cookie PREF hilang total, buatkan baru
+    if not pref_found:
+        processed_cookies.append({
+            'domain': '.google.com',
+            'name': 'PREF',
+            'path': '/',
+            'secure': True,
+            'httpOnly': False,
+            'value': 'L=en'
+        })
+
+    # -----------------------------------------------------------
+    # 2. SIMPAN KE FILE (STRUKTUR DATA ASLI KAMU)
+    # -----------------------------------------------------------
+    
+    # Gunakan 'processed_cookies' (yang sudah diedit), JANGAN 'cookies' mentah
     data = {
-        "cookies": cookies,
+        "cookies": processed_cookies, 
         "timestamp": datetime.now(),
         "email": email or f"user_{user_id}",
     }
+    
     path = get_cookie_file_path(user_id)
+    
+    # [PENTING] Buat folder dulu jika belum ada (Mencegah error 'No such file')
+    folder_dir = os.path.dirname(path)
+    if folder_dir and not os.path.exists(folder_dir):
+        os.makedirs(folder_dir)
+
+    # Simpan sebagai Pickle (wb)
     with open(path, "wb") as f:
         pickle.dump(data, f)
     
-    # Update session state
+    # -----------------------------------------------------------
+    # 3. UPDATE STATE
+    # -----------------------------------------------------------
     st.session_state.user_cookies[user_id] = data
-    st.session_state.active_user_id = user_id # Set sebagai user aktif (untuk scraping)
+    st.session_state.active_user_id = user_id 
+    
+    print(f"✅ Cookies saved for {user_id} (English Enforced)")
 
 def load_all_cookies():
     """Memuat semua cookies dari disk ke session state, menghapus yang kadaluarsa."""

@@ -88,39 +88,29 @@ def auto_report_review(row, report_type=None):
     
     cookies = user_data["cookies"]
     report_email = user_data.get("email", user_id_to_report)
-    reporter_email_key = get_current_reporter_email_key() # Kunci permanen untuk history
+    reporter_email_key = get_current_reporter_email_key()
 
-    # Inisialisasi Options untuk uc
+    # --- 1. Inisialisasi Options ---
     options = uc.ChromeOptions()
-    # 1. Opsi Bahasa (Memaksa ke English untuk Konsistensi Locator)
+    # Paksa Locale browser ke English US
     options.add_experimental_option('prefs', {
         'intl.accept_languages': 'en,en_US'
     })
     options.add_argument("--lang=en-US")
     options.add_argument("--accept-lang=en-US,en;q=0.9") 
     
-    # 2. Opsi Stabilitas dan Efisiensi (Penambahan Anda)
-    
-    # Menonaktifkan ekstensi dan pop-up (mengurangi beban)
     options.add_argument("--disable-extensions") 
     options.add_argument("--disable-popup-blocking")
-    
-    # Mengurangi penggunaan GPU rendering (sering menyebabkan Stacktrace pada server headless)
     options.add_argument("--disable-gpu") 
-    
-    #options.add_argument("--start-maximized") # Tetap pertahankan ini untuk kompatibilitas
     options.add_argument("--window-size=1200,800")
     options.add_argument("--window-position=-1800,0")
-
-    
-    # 3. Opsi Undetected-Chromedriver & Security (Wajib)
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage") # Penting untuk lingkungan Linux/Docker
+    options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-background-timer-throttling")
-    options.add_argument("--disable-backgrounding-occluded-windows") # <-- Tambahkan ini
-    options.add_argument("--force-device-scale-factor=1") # <-- Tambahkan ini untuk konsistensi UI
-    options.add_argument("--disable-features=site-per-process") # <-- Tambahkan ini untuk mengurangi iframe issues
+    options.add_argument("--disable-backgrounding-occluded-windows")
+    options.add_argument("--force-device-scale-factor=1")
+    options.add_argument("--disable-features=site-per-process")
 
     try:
         # Gunakan undetected-chromedriver
@@ -140,7 +130,7 @@ def auto_report_review(row, report_type=None):
 
         time.sleep(random.uniform(0.5,1.5))#
 
-        driver.get("https://www.google.com/maps")
+        driver.get("https://www.google.com/maps?hl=en")
         if not check_logged_in_via_driver(driver, timeout=3):
             st.warning(f"Invalid cookies for {report_email} — login may need to be repeated")
         else:
@@ -160,18 +150,52 @@ def auto_report_review(row, report_type=None):
         try:
             if gmaps_link_for_report and gmaps_link_for_report.strip():
                 url_base = gmaps_link_for_report.strip()
-                if '?' in url_base:
-                    final_url = f"{url_base}&hl=en"
+
+                # A. Modifikasi Link Awal (Pre-flight)
+                if "hl=" not in url_base:
+                    if "?" in url_base:
+                        final_url = f"{url_base}&hl=en"
+                    else:
+                        final_url = f"{url_base}?hl=en"
                 else:
-                    final_url = f"{url_base}?hl=en"
+                    # Ganti id/in jadi en di link awal
+                    final_url = url_base.replace("hl=id", "hl=en").replace("hl=in", "hl=en")
+                
                 driver.get(final_url)
+                
+                # B. TUNGGU Redirect Selesai (Sangat Penting untuk Short Link)
+                time.sleep(2.5) 
+
+                # C. CEK LINK PANJANG (Post-flight Check) & RELOAD JIKA PERLU
+                current_url = driver.current_url
+                
+                # Jika setelah redirect linknya tidak mengandung 'hl=en' (kemungkinan balik ke Indo)
+                if "hl=en" not in current_url:
+                    st.info("⚠️ Detected non-English URL after redirect. Forcing reload to English...")
+                    
+                    new_url = current_url
+                    if "hl=" in new_url:
+                        new_url = new_url.replace("hl=id", "hl=en").replace("hl=in", "hl=en")
+                    else:
+                        if "?" in new_url:
+                            new_url += "&hl=en"
+                        else:
+                            new_url += "?hl=en"
+                    
+                    # Reload Halaman dengan URL yang sudah diperbaiki
+                    if new_url != current_url:
+                        driver.get(new_url)
+                        time.sleep(0.3) # Tunggu reload selesai
             else:
-                search_url = f"https://www.google.com/maps/search/{row['Place'].replace(' ', '+')}"
+                # Fallback jika tidak ada link input (Search Manual)
+                search_url = f"https://www.google.com/maps/search/{row['Place'].replace(' ', '+')}?hl=en"
                 driver.get(search_url)
+
         except Exception as e:
             st.warning(f"Gagal membuka link Google Maps: {e}")
 
-        time.sleep(random.uniform(1,3))#a acak yang lebih panjang untuk loading halaman
+
+        time.sleep(random.uniform(1,2))#a acak yang lebih panjang untuk loading halaman
 
         try:
             tab = driver.find_element(By.XPATH, "//button[contains(., 'Reviews') or contains(., 'Ulasan')]")
@@ -194,7 +218,7 @@ def auto_report_review(row, report_type=None):
                     break
                 except:
                     continue
-            time.sleep(random.uniform(0.5, 2))
+            time.sleep(random.uniform(0.5, 1))
         except Exception:
             pass
 
@@ -278,7 +302,7 @@ def auto_report_review(row, report_type=None):
             driver.quit()
             return
         
-        WebDriverWait(driver, 3).until(
+        WebDriverWait(driver, 2).until(
             EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Report review') or contains(text(), 'Laporkan ulasan')]"))
         )
         
@@ -300,11 +324,30 @@ def auto_report_review(row, report_type=None):
             return
 
         st.toast(f"✅ click ‘report review’ to {row['User']}")
-        time.sleep(random.uniform(3, 4)) # Jeda diperpanjang sebelum klik kategori
+        time.sleep(random.uniform(1, 2)) # Jeda diperpanjang sebelum klik kategori
 
         tabs = driver.window_handles
         if len(tabs) > 1:
             driver.switch_to.window(tabs[-1])
+        
+        current_popup_url = driver.current_url
+
+        
+        if "hl=en" not in current_popup_url:
+                st.toast("⚠️ Popup is Indonesian. Forcing English...")
+                
+                # Tambahkan parameter hl=en ke URL popup
+                if "?" in current_popup_url:
+                    new_popup_url = current_popup_url + "&hl=en"
+                else:
+                    new_popup_url = current_popup_url + "?hl=en"
+                
+                # Paksa ganti ID ke EN jika ada hl=id
+                new_popup_url = new_popup_url.replace("hl=id", "hl=en").replace("hl=in", "hl=en")
+                
+                # Reload halaman popup dengan bahasa Inggris
+                driver.get(new_popup_url)
+                time.sleep(0.5) # Tunggu reload selesai
         else:
             st.warning("⚠️ New tab not detected, popup may be in iframe")
 
@@ -466,7 +509,7 @@ def auto_report_review(row, report_type=None):
                 "User": row["User"],
                 "Review Text": row["Review Text"],
                 "Date": row["Date (Parsed)"],
-                "Kategori Report": report_type,
+                "Category report": report_type,
                 "Reported By": reporter_email,
                 "Review Key": review_key,
                 'Reported Time': time.strftime("%Y-%m-%d %H:%M:%S")

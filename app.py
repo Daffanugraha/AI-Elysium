@@ -528,7 +528,7 @@ with col_main:
                             save_report_history(st.session_state.report_history) # Simpan ke disk
                             
                             status_container.success(f"✅ Success reporting {row['User']} as '{current_report_choice}'.")
-                            time.sleep(0.5)
+                            time.sleep(0.3)
                         else:
                             status_container.warning(f"Failed to report review from {row['User']}. Stopping page report. Details: {report_result}")
                             #st.session_state.is_reporting = False
