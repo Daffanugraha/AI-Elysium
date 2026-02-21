@@ -78,7 +78,7 @@ def get_low_rating_reviews(gmaps_link, max_scrolls=4000) -> Tuple[pd.DataFrame, 
         skipped_count_critical = 0 
         
         # --- HUMAN-SMOOTH SCROLLING PARAMS ---
-        MIN_SCROLL_STEP = 700  
+        MIN_SCROLL_STEP = 500  
         MAX_SCROLL_STEP = 1000  
         MIN_SLEEP = 0.03       
         MAX_SLEEP = 0.07       

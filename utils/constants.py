@@ -11,7 +11,7 @@ HISTORY_FILE = "report_history_email.json" # Kunci: Email Reporter
 SUBMITTED_LOG_FILE = "submitted_log.json" # Log untuk tampilan UI (Global)
 
 # --- Konfigurasi Timeout dan Kadaluarsa ---
-COOKIE_EXPIRY_MINUTES = 90  # 1 hours 30 Minutes
+COOKIE_EXPIRY_MINUTES = 150  # 1 hours 30 Minutes
 LOGIN_TIMEOUT_SECONDS = 300  # 5 menit
 
 # --- Kategori Laporan Resmi ---
