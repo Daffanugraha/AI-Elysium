@@ -1,4 +1,4 @@
-<div align="center">
+[<div align="center">
 
 <img src="static/Background.jpg" alt="AI Elysium Banner" width="100%" />
 
@@ -428,3 +428,4 @@ Made with ❤️ by **[Daffa Nugraha](https://github.com/Daffanugraha)**
 ⭐ Kalau project ini berguna, kasih **Star** ya!
 
 </div>
+](https://www.linkedin.com/in/mdaffanugraha/)
